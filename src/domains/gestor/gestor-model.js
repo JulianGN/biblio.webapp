@@ -13,7 +13,7 @@ export class Livro {
     capa,
     idioma,
     genero,
-    unidades = [],
+    unidades = [], // [{ unidade: { id: 1, nome: Teste }, exemplares: 5 }],
   }) {
     this.id = id;
     this.titulo = titulo;

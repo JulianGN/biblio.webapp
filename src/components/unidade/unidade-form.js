@@ -38,6 +38,20 @@ class UnidadeForm extends HTMLElement {
         </div>
       </form>
     `;
+    setTimeout(() => {
+      const voltarBtn = this.querySelector("#voltar-unidade-btn");
+      const cancelarBtn = this.querySelector("#cancelar-unidade-btn");
+      if (voltarBtn)
+        voltarBtn.onclick = (e) => {
+          e.preventDefault();
+          window.navigate && window.navigate("/unidades");
+        };
+      if (cancelarBtn)
+        cancelarBtn.onclick = (e) => {
+          e.preventDefault();
+          window.navigate && window.navigate("/unidades");
+        };
+    }, 0);
   }
 }
 customElements.define("unidade-form", UnidadeForm);

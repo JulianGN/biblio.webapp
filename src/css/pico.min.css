@@ -13,6 +13,7 @@ body {
     --pico-accent: var(--color-accent1, #FBCDCD);
     --pico-accent-hover: var(--color-accent2, #F5CA6E);
     --pico-accent-alt: var(--color-accent3, #F3A04E);
+    --pico-table-border-color: var(--color-primary-lighter, #B4DCD3);
     --pico-color: var(--color-text, #4b5353);
     --pico-h1-color: var(--pico-primary);
     --pico-h2-color: var(--pico-primary);
@@ -20,6 +21,7 @@ body {
     --pico-h4-color: var(--pico-primary);
     --pico-h5-color: var(--pico-primary);
     --pico-h6-color: var(--pico-primary);
+    --pico-form-element-color: var(--color-text, #4b5353);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -37,6 +39,7 @@ body {
         --pico-form-element-border-color: #f4fffe;
         --pico-accent-hover: var(--color-accent2, #F5CA6E);
         --pico-accent-alt: var(--color-accent3, #F3A04E);
+        --pico-table-border-color: var(--color-primary-lighter, #B4DCD3);
         --pico-color: var(--color-text, #4b5353);
         --pico-h1-color: var(--pico-primary);
         --pico-h2-color: var(--pico-primary);
@@ -44,6 +47,7 @@ body {
         --pico-h4-color: var(--pico-primary);
         --pico-h5-color: var(--pico-primary);
         --pico-h6-color: var(--pico-primary);
+        --pico-form-element-color: var(--color-text, #4b5353);
 
     }
 }

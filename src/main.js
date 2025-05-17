@@ -10,6 +10,7 @@ import { AuthController } from "./domains/auth/auth-controller.js";
 import { AuthView } from "./domains/auth/auth-view.js";
 
 const gestorController = new GestorController();
+window.gestorController = gestorController;
 const authController = new AuthController();
 const authView = new AuthView();
 
@@ -48,6 +49,36 @@ function router() {
   clearHeader();
   window.scrollTo(0, 0);
   const path = window.location.pathname;
+
+  // Rotas dinâmicas para detalhes (devem vir antes do switch)
+  if (/^\/livros\/[0-9]+\/detalhe$/.test(path)) {
+    document.body.insertAdjacentHTML(
+      "afterbegin",
+      /* html */ `
+      <main>
+        <app-header></app-header>
+        <div id="app-content" class="app-content"></div>
+      </main>
+    `
+    );
+    const id = parseInt(path.split("/")[2]);
+    gestorController.showLivroDetalhe(id);
+    return;
+  }
+  if (/^\/unidades\/[0-9]+\/detalhe$/.test(path)) {
+    document.body.insertAdjacentHTML(
+      "afterbegin",
+      /* html */ `
+      <main>
+        <app-header></app-header>
+        <div id="app-content" class="app-content"></div>
+      </main>
+    `
+    );
+    const id = parseInt(path.split("/")[2]);
+    gestorController.showUnidadeDetalhe(id);
+    return;
+  }
 
   // Rotas dinâmicas para edição
   if (/^\/livros\/[0-9]+$/.test(path)) {
@@ -100,9 +131,7 @@ function router() {
       );
       document.querySelector(
         "#app-content"
-      ).innerHTML = /* html */ `<button id="add-livro-btn" style="margin-bottom:16px">+ Adicionar Livro</button><div id="livros-list"></div>`;
-      document.getElementById("add-livro-btn").onclick = () =>
-        navigate("/livros/novo");
+      ).innerHTML = /* html */ `<div id="livros-list"></div>`;
       gestorController.showLivrosPage({
         onAdd: () => navigate("/livros/novo"),
         onEdit: (id) => navigate(`/livros/${id}`),
@@ -110,6 +139,7 @@ function router() {
           gestorController.deleteLivro(id);
           router();
         },
+        onView: (id) => navigate(`/livros/${id}/detalhe`),
       });
       break;
     case "/livros/novo":
@@ -136,9 +166,7 @@ function router() {
       );
       document.querySelector(
         "#app-content"
-      ).innerHTML = /* html */ `<button id="add-unidade-btn" style="margin-bottom:16px">+ Adicionar Unidade</button><div id="unidades-list"></div>`;
-      document.getElementById("add-unidade-btn").onclick = () =>
-        navigate("/unidades/novo");
+      ).innerHTML = /* html */ `<div id="unidades-list"></div>`;
       gestorController.showUnidadesPage({
         onAdd: () => navigate("/unidades/novo"),
         onEdit: (id) => navigate(`/unidades/${id}`),
@@ -146,6 +174,7 @@ function router() {
           gestorController.deleteUnidade(id);
           router();
         },
+        onView: (id) => navigate(`/unidades/${id}/detalhe`),
       });
       break;
     case "/unidades/novo":

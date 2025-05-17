@@ -8,7 +8,7 @@ export class GestorView {
     // Aqui você pode implementar a renderização no DOM
   }
 
-  renderLivrosPage(livros, onAdd, onEdit, onDelete) {
+  renderLivrosPage(livros, onAdd, onEdit, onDelete, onView) {
     const container =
       document.getElementById("livros-list") ||
       document.querySelector("#app-content");
@@ -17,8 +17,10 @@ export class GestorView {
     `;
     const livroList = container.querySelector("livro-list");
     livroList.livros = livros;
+    livroList.onAdd = onAdd;
     livroList.onEdit = onEdit;
     livroList.onDelete = onDelete;
+    livroList.onView = onView;
   }
 
   renderLivroForm(onSubmit, livro = null, onBack = null) {
@@ -85,7 +87,7 @@ export class GestorView {
     }, 0);
   }
 
-  renderUnidadesPage(unidades, onAdd, onEdit, onDelete) {
+  renderUnidadesPage(unidades, onAdd, onEdit, onDelete, onView) {
     const container =
       document.getElementById("unidades-list") ||
       document.querySelector("#app-content");
@@ -94,7 +96,63 @@ export class GestorView {
     `;
     const unidadeList = container.querySelector("unidade-list");
     unidadeList.unidades = unidades;
+    unidadeList.onAdd = onAdd;
     unidadeList.onEdit = onEdit;
     unidadeList.onDelete = onDelete;
+    unidadeList.onView = onView;
+  }
+
+  renderLivroDetalhe(livro) {
+    document.querySelector("#app-content").innerHTML = /* html */ `
+      <div class="form-container">
+        <div class="livro-detalhe-header">
+          <button id="voltar-livro-detalhe" class="outline border-0">&larr;</button>
+          <h2>${livro.titulo}</h2>
+        </div>
+        <p><strong>Autor:</strong> ${livro.autor}</p>
+        <p><strong>Editora:</strong> ${livro.editora || "-"}</p>
+        <p><strong>Data de Publicação:</strong> ${
+          livro.data_publicacao || "-"
+        }</p>
+        <p><strong>ISBN:</strong> ${livro.isbn || "-"}</p>
+        <p><strong>Páginas:</strong> ${livro.paginas || "-"}</p>
+        <p><strong>Idioma:</strong> ${livro.idioma || "-"}</p>
+        <p><strong>Gênero:</strong> ${livro.genero || "-"}</p>
+        <h3>Exemplares por Unidade</h3>
+        <ul>
+          ${
+            (livro.unidades || []).length > 0
+              ? livro.unidades
+                  .map(
+                    (u) =>
+                      `<li><strong>${u.unidade.nome}:</strong> ${
+                        u.exemplares || 0
+                      } exemplar(es)</li>`
+                  )
+                  .join("")
+              : "<li>Nenhuma unidade cadastrada para este livro.</li>"
+          }
+        </ul>
+      </div>
+    `;
+    document.getElementById("voltar-livro-detalhe").onclick = () =>
+      window.navigate && window.navigate("/livros");
+  }
+
+  renderUnidadeDetalhe(unidade) {
+    document.querySelector("#app-content").innerHTML = /* html */ `
+      <div class="form-container">
+        <div class="unidade-detalhe-header">
+          <button id="voltar-unidade-detalhe" class="outline border-0">&larr;</button>
+          <h2>${unidade.nome}</h2>
+        </div>
+        <p><strong>Endereço:</strong> ${unidade.endereco}</p>
+        <p><strong>Telefone:</strong> ${unidade.telefone || "-"}</p>
+        <p><strong>Email:</strong> ${unidade.email || "-"}</p>
+        <p><strong>Site:</strong> ${unidade.site || "-"}</p>
+      </div>
+    `;
+    document.getElementById("voltar-unidade-detalhe").onclick = () =>
+      window.navigate && window.navigate("/unidades");
   }
 }

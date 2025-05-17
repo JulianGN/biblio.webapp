@@ -16,7 +16,10 @@ export class GestorService {
         capa: "",
         idioma: "Inglês",
         genero: 1,
-        unidades: [{ unidade: 1, exemplares: 5 }],
+        unidades: [
+          { unidade: { id: 1, nome: "Unidade de Teste 1" }, exemplares: 5 },
+          { unidade: { id: 2, nome: "Unidade de Teste 2" }, exemplares: 3 },
+        ],
       },
       {
         id: 2,
@@ -29,7 +32,10 @@ export class GestorService {
         capa: "",
         idioma: "Espanhol",
         genero: 2,
-        unidades: [{ unidade: 2, exemplares: 3 }],
+        unidades: [
+          { unidade: { id: 1, nome: "Unidade de Teste 1" }, exemplares: 3 },
+          { unidade: { id: 12, nome: "Unidade de Teste 2" }, exemplares: 5 },
+        ],
       },
     ];
     this.unidades = [

@@ -16,3 +16,18 @@
     grid-template-columns: auto 1fr;
     gap: 1rem;
 }
+
+.livro-detalhe-header {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.livro-detalhe-header h2 {
+    margin: 0;
+}
+
+.livro-unidade-header {
+    display: flex;
+    align-items: center;
+}

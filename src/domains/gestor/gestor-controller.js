@@ -330,4 +330,15 @@ export class GestorController {
       onBack || (() => navigate("/unidades"))
     );
   }
+
+  showLivroDetalhe(id) {
+    const livro = this.listarLivros().find((l) => l.id === id);
+    const unidades = this.service.unidades || [];
+    this.view.renderLivroDetalhe(livro, unidades);
+  }
+
+  showUnidadeDetalhe(id) {
+    const unidade = this.service.unidades.find((u) => u.id === id);
+    this.view.renderUnidadeDetalhe(unidade);
+  }
 }

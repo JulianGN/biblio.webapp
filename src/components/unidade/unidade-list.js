@@ -21,8 +21,22 @@ class UnidadeList extends HTMLElement {
     this.render();
   }
 
+  set onView(callback) {
+    this._onView = callback;
+    this.render();
+  }
+
+  set onAdd(callback) {
+    this._onAdd = callback;
+    this.render();
+  }
+
   render() {
     this.innerHTML = /* html */ `
+      <div class="unidade-list-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <h2 style="margin:0;">Lista de Unidades</h2>
+        <button id="add-unidade-btn" class="outline">+ Adicionar Unidade</button>
+      </div>
       <table class="unidades-table">
         <thead>
           <tr>
@@ -31,7 +45,7 @@ class UnidadeList extends HTMLElement {
             <th>Telefone</th>
             <th>Email</th>
             <th>Site</th>
-            <th class="text-end">Ações</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -46,6 +60,9 @@ class UnidadeList extends HTMLElement {
               <td>${unidade.site || ""}</td>
               <td>
                 <div class="unidade-list-actions">
+                    <button class="view-unidade-icon outline border-0" data-id="${
+                      unidade.id
+                    }" title="Visualizar">👁️</button>
                     <button class="edit-unidade-icon outline border-0" data-id="${
                       unidade.id
                     }" title="Editar">✏️</button>
@@ -61,6 +78,10 @@ class UnidadeList extends HTMLElement {
         </tbody>
       </table>
     `;
+    this.querySelector("#add-unidade-btn").onclick = (e) => {
+      e.preventDefault();
+      if (this._onAdd) this._onAdd();
+    };
     this.querySelectorAll(".edit-unidade-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
@@ -73,6 +94,14 @@ class UnidadeList extends HTMLElement {
         if (window.confirm("Tem certeza que deseja excluir esta unidade?")) {
           if (this._onDelete) this._onDelete(parseInt(btn.dataset.id));
         }
+      };
+    });
+    this.querySelectorAll(".view-unidade-icon").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        if (window.navigate)
+          window.navigate(`/unidades/${btn.dataset.id}/detalhe`);
+        else if (this._onView) this._onView(parseInt(btn.dataset.id));
       };
     });
   }

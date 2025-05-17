@@ -12,7 +12,7 @@ export class GestorView {
     const container =
       document.getElementById("livros-list") ||
       document.querySelector("#app-content");
-    container.innerHTML = `
+    container.innerHTML = /* html */ `
       <table class="livros-table">
         <thead>
           <tr>
@@ -25,7 +25,7 @@ export class GestorView {
         <tbody>
           ${livros
             .map(
-              (livro) => `
+              (livro) => /* html */ `
             <tr>
               <td>${livro.titulo}</td>
               <td>${livro.autor}</td>
@@ -42,10 +42,14 @@ export class GestorView {
       </table>
     `;
     container.querySelectorAll(".edit-livro-icon").forEach((btn) => {
-      btn.onclick = () => onEdit(parseInt(btn.dataset.id));
+      btn.onclick = (e) => {
+        e.preventDefault();
+        onEdit(parseInt(btn.dataset.id));
+      };
     });
     container.querySelectorAll(".delete-livro-icon").forEach((btn) => {
-      btn.onclick = () => {
+      btn.onclick = (e) => {
+        e.preventDefault();
         if (window.confirm("Tem certeza que deseja excluir este livro?")) {
           onDelete(parseInt(btn.dataset.id));
         }
@@ -54,15 +58,13 @@ export class GestorView {
   }
 
   renderLivroForm(onSubmit, livro = null, onBack = null) {
-    // Renderiza apenas o formulário, não a lista
-    document.querySelector("#app-content").innerHTML = `
+    document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
-        <button id="voltarBtn" style="margin-bottom:16px">&larr; Voltar</button>
         <h2>${livro ? "Editar Livro" : "Adicionar Livro"}</h2>
         <livro-form></livro-form>
       </div>
     `;
-    const form = document.querySelector("#livroForm");
+    const form = document.querySelector("#livro-form");
     if (livro) {
       form.titulo.value = livro.titulo;
       form.autor.value = livro.autor;
@@ -88,109 +90,48 @@ export class GestorView {
       onSubmit(form);
     });
     if (onBack) {
-      document.getElementById("voltarBtn").onclick = onBack;
+      document.getElementById("voltar-btn").onclick = onBack;
     }
   }
 
   renderUnidadeForm(onSubmit, unidade = null, onBack = null) {
-    document.querySelector("#app-content").innerHTML = `
+    document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
-        <button id="voltarUnidadeBtn" style="margin-bottom:16px">&larr; Voltar</button>
-        <h2>${unidade ? "Editar Unidade" : "Adicionar Unidade"}</h2>
-        <form id="unidadeForm">
-          <div>
-            <label for="nome">Nome:</label>
-            <input type="text" id="nome" name="nome" required />
-          </div>
-          <div>
-            <label for="endereco">Endereço:</label>
-            <input type="text" id="endereco" name="endereco" required />
-          </div>
-          <div>
-            <label for="telefone">Telefone:</label>
-            <input type="text" id="telefone" name="telefone" />
-          </div>
-          <div>
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" />
-          </div>
-          <div>
-            <label for="site">Site:</label>
-            <input type="url" id="site" name="site" />
-          </div>
-          <button type="submit">${
-            unidade ? "Atualizar Unidade" : "Salvar Unidade"
-          }</button>
-        </form>
+        <unidade-form${unidade ? " edit" : ""}></unidade-form>
       </div>
     `;
-    const form = document.getElementById("unidadeForm");
-    if (unidade) {
-      form.nome.value = unidade.nome;
-      form.endereco.value = unidade.endereco;
-      form.telefone.value = unidade.telefone || "";
-      form.email.value = unidade.email || "";
-      form.site.value = unidade.site || "";
-    }
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      onSubmit(form);
-    });
-    if (onBack) {
-      document.getElementById("voltarUnidadeBtn").onclick = onBack;
-    }
+    // Aguarda o componente ser renderizado antes de acessar o form
+    setTimeout(() => {
+      const form = document.querySelector("#unidade-form");
+      if (!form) return;
+      if (unidade) {
+        form.nome.value = unidade.nome;
+        form.endereco.value = unidade.endereco;
+        form.telefone.value = unidade.telefone || "";
+        form.email.value = unidade.email || "";
+        form.site.value = unidade.site || "";
+      }
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        onSubmit(form);
+      });
+      if (onBack) {
+        document.getElementById("voltar-unidade-btn").onclick = onBack;
+        document.getElementById("cancelar-unidade-btn").onclick = onBack;
+      }
+    }, 0);
   }
 
   renderUnidadesPage(unidades, onAdd, onEdit, onDelete) {
     const container =
       document.getElementById("unidades-list") ||
       document.querySelector("#app-content");
-    container.innerHTML = `
-      <table class="unidades-table">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Endereço</th>
-            <th>Telefone</th>
-            <th>Email</th>
-            <th>Site</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${unidades
-            .map(
-              (unidade) => `
-            <tr>
-              <td>${unidade.nome}</td>
-              <td>${unidade.endereco}</td>
-              <td>${unidade.telefone || ""}</td>
-              <td>${unidade.email || ""}</td>
-              <td>${unidade.site || ""}</td>
-              <td style="text-align:right">
-                <button class="edit-unidade-icon" data-id="${
-                  unidade.id
-                }" title="Editar">✏️</button>
-                <button class="delete-unidade-icon" data-id="${
-                  unidade.id
-                }" title="Excluir">🗑️</button>
-              </td>
-            </tr>
-          `
-            )
-            .join("")}
-        </tbody>
-      </table>
+    container.innerHTML = /* html */ `
+      <unidade-list></unidade-list>
     `;
-    container.querySelectorAll(".edit-unidade-icon").forEach((btn) => {
-      btn.onclick = () => onEdit(parseInt(btn.dataset.id));
-    });
-    container.querySelectorAll(".delete-unidade-icon").forEach((btn) => {
-      btn.onclick = () => {
-        if (window.confirm("Tem certeza que deseja excluir esta unidade?")) {
-          onDelete(parseInt(btn.dataset.id));
-        }
-      };
-    });
+    const unidadeList = container.querySelector("unidade-list");
+    unidadeList.unidades = unidades;
+    unidadeList.onEdit = onEdit;
+    unidadeList.onDelete = onDelete;
   }
 }

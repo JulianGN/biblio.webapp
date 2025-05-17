@@ -1,16 +1,16 @@
 # Bibliotecas Conectadas
 
-Este projeto implementa um sistema de gerenciamento de biblioteca com funcionalidades de CRUD (Criar, Ler, Editar, Excluir) para Livros e Bibliotecas (Unidades). Foi desenvolvido utilizando HTML, CSS, JavaScript vanilla, Web Components e Vite.
+Este projeto implementa um sistema de gerenciamento de unidades (bibliotecas) e livros, com funcionalidades de CRUD (Criar, Ler, Editar, Excluir) para ambos. Desenvolvido utilizando HTML, CSS, JavaScript vanilla, Web Components e Vite.
 
 ## Funcionalidades
 
 O sistema permite:
 
-- **Gerenciamento de Bibliotecas:**
-  - Listar todas as bibliotecas cadastradas.
-  - Adicionar novas bibliotecas com informações como nome, endereço, telefone, e-mail e site.
-  - Editar informações de bibliotecas existentes.
-  - Excluir bibliotecas.
+- **Gerenciamento de Unidades (Bibliotecas):**
+  - Listar todas as unidades cadastradas.
+  - Adicionar novas unidades com informações como nome, endereço, telefone, e-mail e site.
+  - Editar informações de unidades existentes.
+  - Excluir unidades.
 - **Gerenciamento de Livros:**
   - Listar todos os livros cadastrados.
   - Adicionar novos livros com informações como título, autor, editora, data de publicação, ISBN, número de páginas, URL da capa, idioma e gênero.
@@ -19,89 +19,55 @@ O sistema permite:
 
 ## Estrutura do Projeto
 
-O projeto está estruturado da seguinte forma:
-
 ```
-biblioteca-crud/
+bibliotecas-conectadas/
 ├── public/
-│   └── vite.svg
+│   ├── favicon.ico
+│   └── assets/
+│       └── imgs/
+│           ├── icone.png
+│           ├── logo.png
+│           └── logotipo.png
 ├── src/
 │   ├── components/
-│   │   ├── biblioteca/
-│   │   │   ├── biblioteca-form.js  # Web Component do formulário de biblioteca
-│   │   │   └── biblioteca-list.js  # Web Component da lista de bibliotecas
-│   │   └── livro/
-│   │       ├── livro-form.js       # Web Component do formulário de livro
-│   │       └── livro-list.js       # Web Component da lista de livros
+│   │   ├── app-header.js
+│   │   ├── app-header.css
+│   │   ├── livro/
+│   │   │   ├── livro-form.js
+│   │   │   ├── livro-form.css
+│   │   │   └── livro-list.js
+│   │   └── unidade/
+│   │       ├── unidade-form.js
+│   │       ├── unidade-form.css
+│   │       ├── unidade-list.js
+│   │       └── unidade-list.css
 │   ├── css/
-│   │   └── style.css             # Arquivo CSS principal (vazio por padrão no Vite vanilla)
-│   ├── main.js                   # Ponto de entrada principal da aplicação
-├── .eslintrc.cjs
-├── .gitignore
+│   │   ├── pico.min.css
+│   │   └── style.css
+│   ├── domains/
+│   │   ├── gestor/
+│   │   │   ├── gestor-controller.js
+│   │   │   ├── gestor-model.js
+│   │   │   ├── gestor-service.js
+│   │   │   └── gestor-view.js
+│   │   └── auth/
+│   │       ├── auth-controller.js
+│   │       └── auth-view.js
+│   └── main.js
 ├── index.html
 ├── package.json
 ├── package-lock.json
-└── vite.config.js
+└── README.md
 ```
 
-- **`public/`**: Contém arquivos estáticos que são servidos diretamente.
-- **`src/`**: Contém o código fonte da aplicação.
-  - **`components/`**: Contém os Web Components reutilizáveis.
-    - **`biblioteca/`**: Componentes relacionados ao CRUD de bibliotecas.
-    - **`livro/`**: Componentes relacionados ao CRUD de livros.
-  - **`css/`**: Contém os arquivos de estilo (atualmente, os estilos principais estão em `main.js` para simplificação).
-  - **`main.js`**: Arquivo principal que inicializa a aplicação, importa os componentes e gerencia a lógica dos CRUDs e dados mockados.
-- **`index.html`**: Arquivo HTML principal da aplicação.
-- **`package.json`**: Define as dependências e scripts do projeto.
-- **`vite.config.js`**: Arquivo de configuração do Vite.
+- **`public/`**: Arquivos estáticos e imagens.
+- **`src/components/`**: Web Components reutilizáveis para livros, unidades e header.
+- **`src/domains/gestor/`**: Lógica de negócio, models, controllers e views para livros e unidades.
+- **`src/domains/auth/`**: Autenticação.
+- **`src/css/`**: Estilos globais e tema customizado.
+- **`src/main.js`**: Ponto de entrada principal da aplicação.
 
-## Como Executar o Projeto Localmente
+## Observações
 
-Para executar o projeto em seu ambiente local, siga os passos abaixo:
-
-1.  **Clone o repositório (ou descompacte os arquivos do projeto em uma pasta).**
-
-2.  **Instale as dependências:**
-    Navegue até o diretório raiz do projeto (`biblioteca-crud`) pelo terminal e execute o comando:
-
-    ```bash
-    npm install
-    ```
-
-3.  **Inicie o servidor de desenvolvimento:**
-    Após a instalação das dependências, execute o comando:
-    ```bash
-    npm run dev
-    ```
-    Este comando iniciará o servidor de desenvolvimento do Vite. A aplicação estará acessível em `http://localhost:5173` (ou outra porta, caso a 5173 esteja em uso).
-
-## Tecnologias Utilizadas
-
-- **HTML5**
-- **CSS3** (estilos básicos inline no `main.js` e placeholders nos componentes)
-- **JavaScript (ES6+)** (vanilla)
-- **Web Components** (para criar componentes de UI reutilizáveis para formulários e listas)
-- **Vite** (como ferramenta de build e servidor de desenvolvimento rápido)
-
-## Validações
-
-Foram implementadas validações simples nos formulários:
-
-- **Bibliotecas:**
-  - Nome: Obrigatório.
-  - Endereço: Obrigatório.
-  - Email: Deve ser um formato de e-mail válido (se preenchido).
-- **Livros:**
-  - Título: Obrigatório.
-  - Autor: Obrigatório.
-  - Páginas: Deve ser um número positivo (se preenchido).
-  - Gênero (ID): Deve ser um número não negativo (se preenchido).
-
-## Próximos Passos (Sugestões)
-
-- Implementar persistência de dados (ex: `localStorage`, API backend).
-- Melhorar a interface do usuário e a estilização.
-- Adicionar um componente dedicado para o campo "unidades" do livro.
-- Implementar paginação para as listas.
-- Adicionar funcionalidades de busca e filtro.
-- Refatorar os estilos para arquivos CSS dedicados.
+- Todos os arquivos relacionados a "biblioteca" foram migrados para "unidade".
+- Utilize as rotas /livros e /unidades para acessar as funcionalidades principais.

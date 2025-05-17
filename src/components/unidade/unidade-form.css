@@ -1,0 +1,29 @@
+/* Estilos específicos para o componente unidade-form */
+#unidade-form {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+#unidade-form label {
+    font-weight: 500;
+}
+
+#unidade-form input {
+    margin-bottom: 1rem;
+}
+
+.unidade-form-footer {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+#unidade-form button[type="button"] {
+    background: var(--pico-accent, #FBCDCD);
+    color: var(--pico-primary, #22C9C6);
+}
+
+#unidade-form button[type="submit"] {
+    background: var(--pico-primary, #22C9C6);
+    color: #fff;
+}

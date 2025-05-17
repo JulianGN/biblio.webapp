@@ -1,14 +1,15 @@
+import "./livro-form.css";
+
 // Web Component para o formulário de livro
 class LivroForm extends HTMLElement {
-    constructor() {
-        super();
-        // Lógica do construtor
-    }
+  constructor() {
+    super();
+    // Lógica do construtor
+  }
 
-    connectedCallback() {
-        this.innerHTML = `
-            <form id="livroForm">
-                <h2>Formulário de Livro</h2>
+  connectedCallback() {
+    this.innerHTML = `
+            <form id="livro-form">
                 <div>
                     <label for="titulo">Título:</label>
                     <input type="text" id="titulo" name="titulo" required>
@@ -42,15 +43,16 @@ class LivroForm extends HTMLElement {
                     <input type="text" id="idioma" name="idioma">
                 </div>
                 <div>
-                    <label for="genero">Gênero (ID):</label> <!-- Simplificado para ID por enquanto -->
+                    <label for="genero">Gênero (ID):</label>
                     <input type="number" id="genero" name="genero">
                 </div>
-                <!-- O campo 'unidades' será tratado na lógica principal, pois é mais complexo -->
-                <button type="submit">Salvar Livro</button>
+                <div class="livro-form-footer">
+                    <button type="button" id="voltar-btn" class="outline">&larr; Voltar</button>
+                    <button type="submit">Salvar Livro</button>
+                </div>
             </form>
         `;
-    }
+  }
 }
 
-customElements.define('livro-form', LivroForm);
-
+customElements.define("livro-form", LivroForm);

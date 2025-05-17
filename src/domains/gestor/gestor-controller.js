@@ -64,7 +64,7 @@ export class GestorController {
     const livroId = parseInt(event.target.dataset.id);
     const livro = this.listarLivros().find((l) => l.id === livroId);
     if (livro && this.livroFormComponent) {
-      const form = this.livroFormComponent.querySelector("#livroForm");
+      const form = this.livroFormComponent.querySelector("#livro-form");
       this.clearFormErrors(form);
       form.titulo.value = livro.titulo;
       form.autor.value = livro.autor;
@@ -95,7 +95,7 @@ export class GestorController {
 
   setupFormHandler() {
     if (this.livroFormComponent) {
-      const form = this.livroFormComponent.querySelector("#livroForm");
+      const form = this.livroFormComponent.querySelector("#livro-form");
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         this.clearFormErrors(form);
@@ -255,6 +255,11 @@ export class GestorController {
     );
   }
 
+  editLivro(id, onBack = null) {
+    const livro = this.listarLivros().find((l) => l.id === id);
+    this.showLivroForm(livro, onBack);
+  }
+
   showUnidadesPage(callbacks = {}) {
     this.view = this.view || new GestorView();
     this.view.renderUnidadesPage(
@@ -277,6 +282,11 @@ export class GestorController {
   deleteUnidade(id) {
     this.service.removerUnidade(id);
     this.showUnidadesPage();
+  }
+
+  deleteLivro(id) {
+    this.removerLivro(id);
+    this.showLivrosPage();
   }
 
   async showUnidadeForm(unidade = null, onBack = null) {

@@ -100,7 +100,7 @@ function router() {
       );
       document.querySelector(
         "#app-content"
-      ).innerHTML = /* html */ `<button id="add-livro-btn" class="outline">+ Adicionar Livro</button><div id="livros-list"></div>`;
+      ).innerHTML = /* html */ `<button id="add-livro-btn" style="margin-bottom:16px">+ Adicionar Livro</button><div id="livros-list"></div>`;
       document.getElementById("add-livro-btn").onclick = () =>
         navigate("/livros/novo");
       gestorController.showLivrosPage({

@@ -9,6 +9,7 @@ body {
     --pico-background: var(--color-background, #FFFDF9);
     --pico-background-color: var(--color-background, #FFFDF9);
     --pico-form-element-background-color: var(--color-background, #FFFDF9);
+    --pico-form-element-active-background-color: #f4fffe;
     --pico-accent: var(--color-accent1, #FBCDCD);
     --pico-accent-hover: var(--color-accent2, #F5CA6E);
     --pico-accent-alt: var(--color-accent3, #F3A04E);
@@ -31,8 +32,9 @@ body {
         --pico-background: var(--color-background, #FFFDF9);
         --pico-background-color: var(--color-background, #FFFDF9);
         --pico-form-element-background-color: var(--color-background, #FFFDF9);
+        --pico-form-element-active-background-color: #f4fffe;
         --pico-accent: var(--color-accent1, #FBCDCD);
-        --pico-form-element-border-color: #e6e2d6;
+        --pico-form-element-border-color: #f4fffe;
         --pico-accent-hover: var(--color-accent2, #F5CA6E);
         --pico-accent-alt: var(--color-accent3, #F3A04E);
         --pico-color: var(--color-text, #4b5353);
@@ -42,6 +44,7 @@ body {
         --pico-h4-color: var(--pico-primary);
         --pico-h5-color: var(--pico-primary);
         --pico-h6-color: var(--pico-primary);
+
     }
 }
 

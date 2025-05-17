@@ -31,7 +31,7 @@ class UnidadeList extends HTMLElement {
             <th>Telefone</th>
             <th>Email</th>
             <th>Site</th>
-            <th>Ações</th>
+            <th class="text-end">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -44,13 +44,15 @@ class UnidadeList extends HTMLElement {
               <td>${unidade.telefone || ""}</td>
               <td>${unidade.email || ""}</td>
               <td>${unidade.site || ""}</td>
-              <td style="text-align:right">
-                <button class="edit-unidade-icon" data-id="${
-                  unidade.id
-                }" title="Editar">✏️</button>
-                <button class="delete-unidade-icon" data-id="${
-                  unidade.id
-                }" title="Excluir">🗑️</button>
+              <td>
+                <div class="unidade-list-actions">
+                    <button class="edit-unidade-icon outline border-0" data-id="${
+                      unidade.id
+                    }" title="Editar">✏️</button>
+                    <button class="delete-unidade-icon outline border-0" data-id="${
+                      unidade.id
+                    }" title="Excluir">🗑️</button>
+                </div>
               </td>
             </tr>
           `

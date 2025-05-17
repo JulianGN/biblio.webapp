@@ -6,8 +6,8 @@ class UnidadeForm extends HTMLElement {
     const isEdit = this.hasAttribute("edit");
     this.innerHTML = `
       <form id="unidade-form">
-        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-          <button type="button" id="voltar-unidade-btn" class="outline" style="padding: 0 0.5rem; font-size: 1.2em;">&larr;</button>
+        <div class="unidade-form-header">
+          <button type="button" id="voltar-unidade-btn" class="outline border-0">&larr;</button>
           <h2 style="margin: 0;">${
             isEdit ? "Editar Unidade" : "Adicionar Unidade"
           }</h2>

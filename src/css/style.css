@@ -28,3 +28,19 @@ body>main {
   background-color: var(--color-content-background);
   padding: 1rem;
 }
+
+.border-0 {
+  border: none;
+}
+
+.text-end {
+  text-align: end;
+}
+
+.text-start {
+  text-align: start;
+}
+
+.text-center {
+  text-align: center;
+}

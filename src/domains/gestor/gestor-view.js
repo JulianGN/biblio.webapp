@@ -13,55 +13,18 @@ export class GestorView {
       document.getElementById("livros-list") ||
       document.querySelector("#app-content");
     container.innerHTML = /* html */ `
-      <table class="livros-table">
-        <thead>
-          <tr>
-            <th>Título</th>
-            <th>Autor</th>
-            <th>ISBN</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${livros
-            .map(
-              (livro) => /* html */ `
-            <tr>
-              <td>${livro.titulo}</td>
-              <td>${livro.autor}</td>
-              <td>${livro.isbn}</td>
-              <td style="text-align:right">
-                <button class="edit-livro-icon" data-id="${livro.id}" title="Editar">✏️</button>
-                <button class="delete-livro-icon" data-id="${livro.id}" title="Excluir">🗑️</button>
-              </td>
-            </tr>
-          `
-            )
-            .join("")}
-        </tbody>
-      </table>
+      <livro-list></livro-list>
     `;
-    container.querySelectorAll(".edit-livro-icon").forEach((btn) => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        onEdit(parseInt(btn.dataset.id));
-      };
-    });
-    container.querySelectorAll(".delete-livro-icon").forEach((btn) => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        if (window.confirm("Tem certeza que deseja excluir este livro?")) {
-          onDelete(parseInt(btn.dataset.id));
-        }
-      };
-    });
+    const livroList = container.querySelector("livro-list");
+    livroList.livros = livros;
+    livroList.onEdit = onEdit;
+    livroList.onDelete = onDelete;
   }
 
   renderLivroForm(onSubmit, livro = null, onBack = null) {
     document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
-        <h2>${livro ? "Editar Livro" : "Adicionar Livro"}</h2>
-        <livro-form></livro-form>
+        <livro-form ${livro ? "edit" : ""}></livro-form>
       </div>
     `;
     const form = document.querySelector("#livro-form");
@@ -97,7 +60,7 @@ export class GestorView {
   renderUnidadeForm(onSubmit, unidade = null, onBack = null) {
     document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
-        <unidade-form${unidade ? " edit" : ""}></unidade-form>
+        <unidade-form ${unidade ? "edit" : ""}></unidade-form>
       </div>
     `;
     // Aguarda o componente ser renderizado antes de acessar o form

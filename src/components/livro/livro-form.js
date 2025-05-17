@@ -8,8 +8,16 @@ class LivroForm extends HTMLElement {
   }
 
   connectedCallback() {
+    const isEdit = this.hasAttribute("edit");
+
     this.innerHTML = `
             <form id="livro-form">
+                <div class="livro-form-header">
+                    <button type="button" id="voltar-livro-btn" class="outline border-0">&larr;</button>
+                    <h2 style="margin: 0;">${
+                      isEdit ? "Editar Livro" : "Adicionar Livro"
+                    }</h2>
+                </div>
                 <div>
                     <label for="titulo">Título:</label>
                     <input type="text" id="titulo" name="titulo" required>
@@ -47,7 +55,7 @@ class LivroForm extends HTMLElement {
                     <input type="number" id="genero" name="genero">
                 </div>
                 <div class="livro-form-footer">
-                    <button type="button" id="voltar-btn" class="outline">&larr; Voltar</button>
+                    <button type="button" id="voltar-btn" class="outline">Cancelar</button>
                     <button type="submit">Salvar Livro</button>
                 </div>
             </form>

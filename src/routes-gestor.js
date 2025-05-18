@@ -1,4 +1,4 @@
-export function gestorRoutes({ gestorController, gestorView, navigate }) {
+export async function gestorRoutes({ gestorController, gestorView, navigate }) {
   function clearHeader() {
     const main = document.querySelector("main");
     if (main) main.remove();
@@ -60,15 +60,8 @@ export function gestorRoutes({ gestorController, gestorView, navigate }) {
       `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
     );
     const id = parseInt(path.split("/")[2]);
-    const livro = gestorController.listarLivros().find((l) => l.id === id);
-    gestorView.renderLivroExemplaresForm(
-      livro,
-      (exemplaresPorUnidade) => {
-        livro.unidades = exemplaresPorUnidade;
-        gestorController.atualizarLivro(livro);
-        navigate("/livros");
-      },
-      () => navigate("/livros")
+    await gestorController.showLivroExemplaresForm(id, () =>
+      navigate("/livros")
     );
     return true;
   }

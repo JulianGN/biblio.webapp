@@ -91,7 +91,7 @@ class LivroList extends HTMLElement {
       <div class="livro-list-search" style="margin-bottom:1rem;">
         <input type="search" id="busca-livro" placeholder="Buscar livro..." value="${
           this._search || ""
-        }" style="max-width:300px;">
+        }">
       </div>
       <div class="table-responsive">
         <table class="livros-table striped">
@@ -110,37 +110,16 @@ class LivroList extends HTMLElement {
     // Renderiza apenas o tbody separadamente
     const tbody = this.querySelector("#livros-tbody");
     if (tbody) {
-      tbody.innerHTML = this.filteredLivros
-        .map(
-          (livro) => /* html */ `
-            <tr>
-              <td>${livro.titulo}</td>
-              <td>${livro.autor}</td>
-              <td>${livro.isbn}</td>
-              <td>
-                <div class="list-actions livro-list-actions">
-                  <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-                  <button class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
-                  <button class="edit-exemplares-livro-icon outline border-0" data-id="${livro.id}" title="Exemplares por unidade"><i class="fa-solid fa-list-ol"></i></button>
-                  <button class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
-                </div>
-              </td>
-            </tr>
-          `
-        )
-        .join("");
-    }
-    // Eventos
-    this.querySelector("#add-livro-btn").onclick = (e) => {
-      e.preventDefault();
-      if (this._onAdd) this._onAdd();
-    };
-    this.querySelector("#busca-livro").oninput = (e) => {
-      this._search = e.target.value;
-      // Só atualiza o tbody, não o componente inteiro
-      const tbody = this.querySelector("#livros-tbody");
-      if (tbody) {
-        tbody.innerHTML = this.filteredLivros
+      let livros = this.filteredLivros;
+      if (livros.length === 0) {
+        const isBusca = this._search && this._search.trim().length > 0;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#888;">${
+          isBusca
+            ? "Nenhum livro encontrado para o termo buscado. Tente outro termo."
+            : "Nenhum livro cadastrado. Clique em '+ Adicionar Livro' para inserir o primeiro."
+        }</td></tr>`;
+      } else {
+        tbody.innerHTML = livros
           .map(
             (livro) => /* html */ `
               <tr>
@@ -159,6 +138,47 @@ class LivroList extends HTMLElement {
             `
           )
           .join("");
+      }
+    }
+    // Eventos
+    this.querySelector("#add-livro-btn").onclick = (e) => {
+      e.preventDefault();
+      if (this._onAdd) this._onAdd();
+    };
+    this.querySelector("#busca-livro").oninput = (e) => {
+      this._search = e.target.value;
+      // Só atualiza o tbody, não o componente inteiro
+      const tbody = this.querySelector("#livros-tbody");
+      if (tbody) {
+        let livros = this.filteredLivros;
+        if (livros.length === 0) {
+          const isBusca = this._search && this._search.trim().length > 0;
+          tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#888;">${
+            isBusca
+              ? "Nenhum livro encontrado para o termo buscado. Tente outro termo."
+              : "Nenhum livro cadastrado. Clique em '+ Adicionar Livro' para inserir o primeiro."
+          }</td></tr>`;
+        } else {
+          tbody.innerHTML = livros
+            .map(
+              (livro) => /* html */ `
+                <tr>
+                  <td>${livro.titulo}</td>
+                  <td>${livro.autor}</td>
+                  <td>${livro.isbn}</td>
+                  <td>
+                    <div class="list-actions livro-list-actions">
+                      <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+                      <button class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                      <button class="edit-exemplares-livro-icon outline border-0" data-id="${livro.id}" title="Exemplares por unidade"><i class="fa-solid fa-list-ol"></i></button>
+                      <button class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              `
+            )
+            .join("");
+        }
         // Reatribui eventos aos botões do novo tbody
         this.querySelectorAll(".edit-livro-icon").forEach((btn) => {
           btn.onclick = (e) => {

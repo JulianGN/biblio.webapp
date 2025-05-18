@@ -24,36 +24,84 @@ export class GestorView {
     livroList.onEditExemplares = onEditExemplares;
   }
 
-  renderLivroForm(onSubmit, livro = null, onBack = null) {
+  renderLivroForm(
+    onSubmit,
+    livro = null,
+    onBack = null,
+    generos = [],
+    unidades = []
+  ) {
     document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
         <livro-form ${livro ? "edit" : ""}></livro-form>
       </div>
     `;
-    const form = document.querySelector("#livro-form");
-    if (livro) {
-      form.titulo.value = livro.titulo;
-      form.autor.value = livro.autor;
-      form.editora.value = livro.editora || "";
-      form.data_publicacao.value = livro.data_publicacao || "";
-      form.isbn.value = livro.isbn || "";
-      form.paginas.value = livro.paginas || "";
-      form.capa.value = livro.capa || "";
-      form.idioma.value = livro.idioma || "";
-      form.genero.value = livro.genero || "";
-      if (!form.querySelector("#livroId")) {
-        const hiddenIdInput = document.createElement("input");
-        hiddenIdInput.type = "hidden";
-        hiddenIdInput.id = "livroId";
-        form.appendChild(hiddenIdInput);
-      }
-      form.querySelector("#livroId").value = livro.id;
-      form.querySelector('button[type="submit"]').textContent =
-        "Atualizar Livro";
+    const livroFormEl = document.querySelector("livro-form");
+    // Passar as unidades disponíveis para o componente
+    livroFormEl._unidadesDisponiveis = unidades;
+    // Passar as unidades já selecionadas para edição
+    if (livro && Array.isArray(livro.unidades)) {
+      livroFormEl._unidadesSelecionadas = livro.unidades;
+      livroFormEl._livroSelecionado = livro;
     }
-    form.addEventListener("submit", (event) => {
+    if (livro) {
+      if (livroFormEl.titulo) livroFormEl.titulo.value = livro.titulo;
+      if (livroFormEl.autor) livroFormEl.autor.value = livro.autor;
+      if (livroFormEl.editora) livroFormEl.editora.value = livro.editora || "";
+      if (livroFormEl.data_publicacao)
+        livroFormEl.data_publicacao.value = livro.data_publicacao || "";
+      if (livroFormEl.isbn) livroFormEl.isbn.value = livro.isbn || "";
+      if (livroFormEl.paginas) livroFormEl.paginas.value = livro.paginas || "";
+      if (livroFormEl.capa) livroFormEl.capa.value = livro.capa || "";
+      if (livroFormEl.idioma) livroFormEl.idioma.value = livro.idioma || "";
+      // Gênero será setado após inserir o select
+    }
+    // Substituir input de gênero por select de forma robusta
+    let generoSelect = null;
+    let generoInput = livroFormEl.querySelector(
+      'input[name="genero"], input#genero'
+    );
+    if (generoInput) {
+      const generoDiv = generoInput.closest("div");
+      if (generoDiv) {
+        generoDiv.innerHTML = `
+          <label for="genero">Gênero:</label>
+          <select id="genero" name="genero" required>
+            <option value="">Selecione o gênero</option>
+            ${generos
+              .map((g) => `<option value="${g.id}">${g.nome}</option>`)
+              .join("")}
+          </select>
+        `;
+        generoSelect = generoDiv.querySelector("select#genero");
+      }
+    } else {
+      // Se não encontrar input, insere o select ANTES do bloco de unidades
+      const unidadeSelect = livroFormEl.querySelector("select#unidade-select");
+      const unidadeDiv = unidadeSelect ? unidadeSelect.closest("div") : null;
+      const generoDiv = document.createElement("div");
+      generoDiv.innerHTML = `
+        <label for="genero">Gênero:</label>
+        <select id="genero" name="genero" required>
+          <option value="">Selecione o gênero</option>
+          ${generos
+            .map((g) => `<option value="${g.id}">${g.nome}</option>`)
+            .join("")}
+        </select>
+      `;
+      if (unidadeDiv && unidadeDiv.parentNode) {
+        unidadeDiv.parentNode.insertBefore(generoDiv, unidadeDiv);
+      } else {
+        livroFormEl.appendChild(generoDiv);
+      }
+      generoSelect = generoDiv.querySelector("select#genero");
+    }
+    if (livro && livro.genero && generoSelect) {
+      generoSelect.value = livro.genero;
+    }
+    livroFormEl.addEventListener("submit", (event) => {
       event.preventDefault();
-      onSubmit(form);
+      onSubmit(livroFormEl);
     });
     if (onBack) {
       document.getElementById("voltar-btn").onclick = onBack;
@@ -79,7 +127,10 @@ export class GestorView {
       }
       form.addEventListener("submit", (event) => {
         event.preventDefault();
-        onSubmit(form);
+        // Garante que o parâmetro é o <form> real
+        if (typeof onSubmit === "function") {
+          onSubmit(event.target);
+        }
       });
       if (onBack) {
         document.getElementById("voltar-unidade-btn").onclick = onBack;
@@ -104,40 +155,37 @@ export class GestorView {
   }
 
   renderLivroDetalhe(livro) {
-    document.querySelector("#app-content").innerHTML = /* html */ `
-      <div class="form-container">
-        <div class="livro-detalhe-header">
-          <button id="voltar-livro-detalhe" class="outline border-0"><i class="fa-solid fa-arrow-left"></i></button>
-          <h2>${livro.titulo}</h2>
+    document.querySelector("#app-content").innerHTML = `
+      <div class="livro-detalhe-container">
+        <h2><button type="button" id="voltar-btn" class="outline border-0"><i class="fa-solid fa-arrow-left"></i></button> Detalhes do Livro</h2>
+        <div>
+          <div><b>Título:</b> ${livro.titulo}</div>
+          <div><b>Autor:</b> ${livro.autor}</div>
+          <div><b>Editora:</b> ${livro.editora || "-"}</div>
+          <div><b>Data de Publicação:</b> ${livro.data_publicacao || "-"}</div>
+          <div><b>ISBN:</b> ${livro.isbn || "-"}</div>
+          <div><b>Páginas:</b> ${livro.paginas || "-"}</div>
+          <div><b>Idioma:</b> ${livro.idioma || "-"}</div>
+          <div><b>Gênero:</b> ${
+            livro.generoObj && livro.generoObj.nome ? livro.generoObj.nome : "-"
+          }</div>
         </div>
-        <p><strong>Autor:</strong> ${livro.autor}</p>
-        <p><strong>Editora:</strong> ${livro.editora || "-"}</p>
-        <p><strong>Data de Publicação:</strong> ${
-          livro.data_publicacao || "-"
-        }</p>
-        <p><strong>ISBN:</strong> ${livro.isbn || "-"}</p>
-        <p><strong>Páginas:</strong> ${livro.paginas || "-"}</p>
-        <p><strong>Idioma:</strong> ${livro.idioma || "-"}</p>
-        <p><strong>Gênero:</strong> ${livro.genero || "-"}</p>
-        <h3>Exemplares por Unidade</h3>
+        <hr/>
+        <h6>Unidades</h6>
         <ul>
           ${
-            (livro.unidades || []).length > 0
-              ? livro.unidades
-                  .map(
-                    (u) =>
-                      `<li><strong>${u.unidade.nome}:</strong> ${
-                        u.exemplares || 0
-                      } exemplar(es)</li>`
-                  )
-                  .join("")
-              : "<li>Nenhuma unidade cadastrada para este livro.</li>"
+            (livro.unidades || [])
+              .map(
+                (u) =>
+                  `<li><strong>${u.unidade.nome}:</strong> ${u.exemplares} exemplar(es)</li>`
+              )
+              .join("") || "<li>Nenhuma unidade cadastrada.</li>"
           }
         </ul>
       </div>
     `;
-    document.getElementById("voltar-livro-detalhe").onclick = () =>
-      window.navigate && window.navigate("/livros");
+    document.getElementById("voltar-btn").onclick = () =>
+      window.navigate ? window.navigate("/livros") : history.back();
   }
 
   renderUnidadeDetalhe(unidade) {
@@ -198,9 +246,9 @@ export class GestorView {
       exemplaresListDiv.innerHTML = exemplaresPorUnidade
         .map(
           (u) => `
-        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:8px;">
-          <span style="min-width:120px;">${u.unidade.nome}</span>
-          <input type="number" min="0" value="${u.exemplares}" data-id="${u.unidade.id}" style="width:60px;">
+        <div class="exemplares-unidade">
+          <input id="exemplares-unidade-${u.unidade.id}" type="number" min="0" value="${u.exemplares}" data-id="${u.unidade.id}">
+          <label for="exemplares-unidade-${u.unidade.id}">${u.unidade.nome}</label>
         </div>
       `
         )

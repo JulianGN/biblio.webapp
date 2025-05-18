@@ -1,89 +1,69 @@
 // Service do domínio Gestor
 // Lógica de negócio relacionada ao gestor
 import { Livro, Unidade } from "./gestor-model.js";
+import { BaseService } from "../base-service.js";
 
-export class GestorService {
+export class GestorService extends BaseService {
   constructor() {
-    this.livros = [
-      {
-        id: 1,
-        titulo: "O Senhor dos Anéis",
-        autor: "J.R.R. Tolkien",
-        editora: "HarperCollins",
-        data_publicacao: "1954-07-29",
-        isbn: "978-0618260274",
-        paginas: 1216,
-        capa: "",
-        idioma: "Inglês",
-        genero: 1,
-        unidades: [
-          { unidade: { id: 1, nome: "Unidade de Teste 1" }, exemplares: 5 },
-          { unidade: { id: 2, nome: "Unidade de Teste 2" }, exemplares: 3 },
-        ],
-      },
-      {
-        id: 2,
-        titulo: "Dom Quixote",
-        autor: "Miguel de Cervantes",
-        editora: "Penguin Classics",
-        data_publicacao: "1605-01-16",
-        isbn: "978-0142437230",
-        paginas: 1056,
-        capa: "",
-        idioma: "Espanhol",
-        genero: 2,
-        unidades: [
-          { unidade: { id: 1, nome: "Unidade de Teste 1" }, exemplares: 3 },
-          { unidade: { id: 12, nome: "Unidade de Teste 2" }, exemplares: 5 },
-        ],
-      },
-    ];
-    this.unidades = [
-      {
-        id: 1,
-        nome: "Biblioteca Central",
-        endereco: "Rua Principal, 123",
-        telefone: "1111-1111",
-        email: "central@example.com",
-        site: "http://central.example.com",
-      },
-      {
-        id: 2,
-        nome: "Biblioteca Municipal",
-        endereco: "Avenida Secundária, 456",
-        telefone: "2222-2222",
-        email: "municipal@example.com",
-        site: "http://municipal.example.com",
-      },
-    ];
+    super();
   }
 
   // CRUD de Livros
-  listarLivros() {
-    return this.livros;
+  async listarLivros() {
+    return this.get("gestor/livros/");
   }
 
-  adicionarLivro(livroData) {
-    const newId =
-      this.livros.length > 0
-        ? Math.max(...this.livros.map((l) => l.id)) + 1
-        : 1;
-    const livro = new Livro({ ...livroData, id: newId });
-    this.livros.push(livro);
-    return livro;
+  async adicionarLivro(livroData) {
+    // Monta o payload conforme esperado pela API
+    const payload = {
+      ...livroData,
+      genero:
+        typeof livroData.genero === "object"
+          ? livroData.genero.id
+          : livroData.genero,
+      unidades: (livroData.unidades || []).map((u) => ({
+        unidade: typeof u.unidade === "object" ? u.unidade.id : u.unidade,
+        exemplares: u.exemplares,
+      })),
+    };
+    return this.post("gestor/livros/", payload);
   }
 
-  atualizarLivro(livroId, livroData) {
-    const index = this.livros.findIndex((l) => l.id === livroId);
-    if (index !== -1) {
-      this.livros[index] = { ...this.livros[index], ...livroData, id: livroId };
-      return this.livros[index];
+  async getLivroById(id) {
+    return this.get(`gestor/livros/${id}/`);
+  }
+
+  async atualizarLivro(livroId, livroData) {
+    // Monta o payload igual ao adicionarLivro
+    const payload = {
+      ...livroData,
+      genero:
+        typeof livroData.genero === "object"
+          ? livroData.genero.id
+          : livroData.genero,
+      unidades: (livroData.unidades || []).map((u) => ({
+        unidade: typeof u.unidade === "object" ? u.unidade.id : u.unidade,
+        exemplares: u.exemplares,
+      })),
+    };
+    return this.put(`gestor/livros/${livroId}/`, payload);
+  }
+
+  async atualizarLivroParcial(livroId, payload) {
+    return this.patch(`gestor/livros/${livroId}/`, payload);
+  }
+
+  async removerLivro(livroId) {
+    const response = await fetch(this.baseUrl + `gestor/livros/${livroId}/`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || `Erro ${response.status}`);
     }
-    return null;
-  }
-
-  removerLivro(livroId) {
-    this.livros = this.livros.filter((l) => l.id !== livroId);
+    // Não tenta fazer response.json() se status 204
+    return true;
   }
 
   // CRUD de Unidades

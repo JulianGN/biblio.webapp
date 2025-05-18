@@ -4,18 +4,34 @@ import "./livro-form.css";
 class LivroForm extends HTMLElement {
   constructor() {
     super();
-    // Lógica do construtor
   }
 
   connectedCallback() {
     const isEdit = this.hasAttribute("edit");
-    // Buscar unidades disponíveis do window.gestorController.service.unidades
     const unidades =
+      this._unidadesDisponiveis ||
       (window.gestorController &&
-        window.gestorController.service &&
-        window.gestorController.service.unidades) ||
+        window.gestorController.initData &&
+        window.gestorController.initData.unidades) ||
       [];
-    this._livroUnidades = [];
+    this._livroUnidades =
+      Array.isArray(this._livroUnidades) && this._livroUnidades.length > 0
+        ? this._livroUnidades
+        : (this._livroUnidades = []);
+    if (
+      isEdit &&
+      this._livroUnidades.length === 0 &&
+      this._unidadesSelecionadas
+    ) {
+      this._livroUnidades = this._unidadesSelecionadas;
+    }
+    if (
+      isEdit &&
+      this._unidadesSelecionadas &&
+      this._unidadesSelecionadas.length > 0
+    ) {
+      this._livroUnidades = [...this._unidadesSelecionadas];
+    }
     this.innerHTML = `
             <form id="livro-form">
                 <div class="livro-form-header">
@@ -62,15 +78,13 @@ class LivroForm extends HTMLElement {
                 </div>
                 <div class="livro-unidade-header">
                     <div class="livro-unidade">
-                      <label for="unidade-select">Unidade:</label>
-                      <select id="unidade-select">
-                        <option value="">Selecione a unidade</option>
-                        ${unidades
-                          .map(
-                            (u) => `<option value="${u.id}">${u.nome}</option>`
-                          )
-                          .join("")}
-                      </select>
+                  <label for="unidade-select">Unidade:</label>
+                  <select id="unidade-select">
+                    <option value="">Selecione a unidade</option>
+                    ${unidades
+                      .map((u) => `<option value="${u.id}">${u.nome}</option>`)
+                      .join("")}
+                  </select>
                     </div>
                     <div class="livro-unidade">
                       <label for="exemplares-input">Exemplares:</label>
@@ -85,7 +99,6 @@ class LivroForm extends HTMLElement {
                 </div>
             </form>
         `;
-    // Lógica para adicionar unidades e exemplares
     setTimeout(() => {
       const voltarBtn = this.querySelector("#voltar-btn");
       const cancelarBtn = this.querySelector("#cancelar-btn");
@@ -103,6 +116,17 @@ class LivroForm extends HTMLElement {
       const exemplaresInput = this.querySelector("#exemplares-input");
       const addUnidadeBtn = this.querySelector("#add-unidade-livro");
       const unidadesListDiv = this.querySelector("#livro-unidades-list");
+      const form = this.querySelector("#livro-form");
+      // Se for edição, popular a lista de unidades já escolhidas
+      if (
+        isEdit &&
+        Array.isArray(this._livroUnidades) &&
+        this._livroUnidades.length === 0 &&
+        this._unidadesSelecionadas
+      ) {
+        this._livroUnidades = this._unidadesSelecionadas;
+      }
+      // Renderizar lista de unidades já escolhidas
       const renderUnidadesList = () => {
         unidadesListDiv.innerHTML =
           this._livroUnidades.length > 0
@@ -129,6 +153,15 @@ class LivroForm extends HTMLElement {
             };
           });
       };
+      if (
+        isEdit &&
+        this._unidadesSelecionadas &&
+        this._unidadesSelecionadas.length > 0
+      ) {
+        this._livroUnidades = [...this._unidadesSelecionadas];
+        renderUnidadesList();
+      }
+
       addUnidadeBtn.onclick = (e) => {
         e.preventDefault();
         const unidadeId = parseInt(unidadeSelect.value);
@@ -139,6 +172,37 @@ class LivroForm extends HTMLElement {
         this._livroUnidades.push({ unidade, exemplares });
         renderUnidadesList();
       };
+      form.addEventListener("submit", (event) => {
+        // Adiciona as unidades selecionadas ao form para o controller
+        if (form._livroUnidades && form._livroUnidades.length > 0) {
+          form._unidadesPayload = form._livroUnidades.map((u) => ({
+            unidade: u.unidade.id,
+            exemplares: u.exemplares,
+          }));
+        } else {
+          form._unidadesPayload = [
+            { unidade: unidades[0]?.id || 1, exemplares: 1 },
+          ];
+        }
+      });
+      // Preencher campos do formulário ao editar
+      if (isEdit && this._livroSelecionado) {
+        const livro = this._livroSelecionado;
+        const form = this.querySelector("#livro-form");
+        if (livro && form) {
+          if (form.titulo) form.titulo.value = livro.titulo || "";
+          if (form.autor) form.autor.value = livro.autor || "";
+          if (form.editora) form.editora.value = livro.editora || "";
+          if (form.data_publicacao)
+            form.data_publicacao.value = livro.data_publicacao || "";
+          if (form.isbn) form.isbn.value = livro.isbn || "";
+          if (form.paginas) form.paginas.value = livro.paginas || "";
+          if (form.capa) form.capa.value = livro.capa || "";
+          if (form.idioma) form.idioma.value = livro.idioma || "";
+          if (form.genero) form.genero.value = livro.genero || "";
+        }
+      }
+      // Renderizar lista de unidades já escolhidas imediatamente ao abrir
       renderUnidadesList();
     }, 0);
   }

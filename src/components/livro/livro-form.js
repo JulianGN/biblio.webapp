@@ -19,7 +19,7 @@ class LivroForm extends HTMLElement {
     this.innerHTML = `
             <form id="livro-form">
                 <div class="livro-form-header">
-                    <button type="button" id="voltar-btn" class="outline border-0">&larr;</button>
+                    <button type="button" id="voltar-btn" class="outline border-0"><i class="fa-solid fa-arrow-left"></i></button>
                     <h2 style="margin: 0;">${
                       isEdit ? "Editar Livro" : "Adicionar Livro"
                     }</h2>
@@ -76,7 +76,7 @@ class LivroForm extends HTMLElement {
                       <label for="exemplares-input">Exemplares:</label>
                       <input type="number" id="exemplares-input" min="1" value="1">
                     </div>
-                     <button type="button" id="add-unidade-livro" class="outline">Adicionar</button>
+                     <button type="button" id="add-unidade-livro" class="outline">Adicionar Unidade</button>
                 </div>
                 <div id="livro-unidades-list" style="margin:8px 0 16px 0;"></div>
                 <div class="livro-form-footer">

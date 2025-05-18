@@ -1,0 +1,11 @@
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+}
+
+.list-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}

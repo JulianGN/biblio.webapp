@@ -10,7 +10,22 @@
     cursor: pointer;
 }
 
+.header .logo--mobile {
+    display: none;
+}
+
 .header nav {
     width: auto;
     margin: 0;
+}
+
+@media (max-width: 768px) {
+    .header .logo--desktop {
+        display: none;
+    }
+
+    .header .logo--mobile {
+        display: block;
+        max-height: 40px;
+    }
 }

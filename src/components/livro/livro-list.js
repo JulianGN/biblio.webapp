@@ -36,6 +36,11 @@ class LivroList extends HTMLElement {
     this.render();
   }
 
+  set onEditExemplares(callback) {
+    this._onEditExemplares = callback;
+    this.render();
+  }
+
   get filteredLivros() {
     if (!this._search) return this.livros;
     const s = this._search.toLowerCase();
@@ -56,19 +61,21 @@ class LivroList extends HTMLElement {
                       this._search || ""
                     }">
                 </div>
-                <table class="livros-table">
-                    <thead>
-                        <tr>
-                            <th>Título</th>
-                            <th>Autor</th>
-                            <th>ISBN</th>
-                            <th class="text-end">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Linhas da tabela serão adicionadas aqui -->
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                  <table class="livros-table striped">
+                      <thead>
+                          <tr>
+                              <th>Título</th>
+                              <th>Autor</th>
+                              <th>ISBN</th>
+                              <th class="text-end">Ações</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          <!-- Linhas da tabela serão adicionadas aqui -->
+                      </tbody>
+                  </table>
+                </div>
             </div>
         `;
   }
@@ -79,24 +86,26 @@ class LivroList extends HTMLElement {
     this.innerHTML = /* html */ `
       <div class="livro-list-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
         <h2 style="margin:0;">Lista de Livros</h2>
-        <button id="add-livro-btn" class="outline">+ Adicionar Livro</button>
+        <button id="add-livro-btn" class="outline">+ <span class="d-sm-none">Adicionar Livro</span></button>
       </div>
       <div class="livro-list-search" style="margin-bottom:1rem;">
         <input type="search" id="busca-livro" placeholder="Buscar livro..." value="${
           this._search || ""
         }" style="max-width:300px;">
       </div>
-      <table class="livros-table">
-        <thead>
-          <tr>
-            <th>Título</th>
-            <th>Autor</th>
-            <th>ISBN</th>
-            <th class="text-end">Ações</th>
-          </tr>
-        </thead>
-        <tbody id="livros-tbody"></tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="livros-table striped">
+          <thead>
+            <tr>
+              <th>Título</th>
+              <th>Autor</th>
+              <th>ISBN</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="livros-tbody"></tbody>
+        </table>
+      </div>
     `;
     // Renderiza apenas o tbody separadamente
     const tbody = this.querySelector("#livros-tbody");
@@ -109,10 +118,11 @@ class LivroList extends HTMLElement {
               <td>${livro.autor}</td>
               <td>${livro.isbn}</td>
               <td>
-                <div class="livro-list-actions">
-                  <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar">👁️</button>
-                  <button class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar">✏️</button>
-                  <button class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir">🗑️</button>
+                <div class="list-actions livro-list-actions">
+                  <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+                  <button class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                  <button class="edit-exemplares-livro-icon outline border-0" data-id="${livro.id}" title="Exemplares por unidade"><i class="fa-solid fa-list-ol"></i></button>
+                  <button class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
               </td>
             </tr>
@@ -138,10 +148,11 @@ class LivroList extends HTMLElement {
                 <td>${livro.autor}</td>
                 <td>${livro.isbn}</td>
                 <td>
-                  <div class="livro-list-actions">
-                    <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar">👁️</button>
-                    <button class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar">✏️</button>
-                    <button class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir">🗑️</button>
+                  <div class="list-actions livro-list-actions">
+                    <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+                    <button class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <button class="edit-exemplares-livro-icon outline border-0" data-id="${livro.id}" title="Exemplares por unidade"><i class="fa-solid fa-list-ol"></i></button>
+                    <button class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
                   </div>
                 </td>
               </tr>
@@ -171,6 +182,15 @@ class LivroList extends HTMLElement {
             else if (this._onView) this._onView(parseInt(btn.dataset.id));
           };
         });
+        this.querySelectorAll(".edit-exemplares-livro-icon").forEach((btn) => {
+          btn.onclick = (e) => {
+            e.preventDefault();
+            if (window.navigate)
+              window.navigate(`/livros/${btn.dataset.id}/exemplares`);
+            else if (this._onEditExemplares)
+              this._onEditExemplares(parseInt(btn.dataset.id));
+          };
+        });
       }
     };
     // Eventos iniciais do tbody
@@ -194,6 +214,15 @@ class LivroList extends HTMLElement {
         if (window.navigate)
           window.navigate(`/livros/${btn.dataset.id}/detalhe`);
         else if (this._onView) this._onView(parseInt(btn.dataset.id));
+      };
+    });
+    this.querySelectorAll(".edit-exemplares-livro-icon").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        if (window.navigate)
+          window.navigate(`/livros/${btn.dataset.id}/exemplares`);
+        else if (this._onEditExemplares)
+          this._onEditExemplares(parseInt(btn.dataset.id));
       };
     });
   }

@@ -35,48 +35,50 @@ class UnidadeList extends HTMLElement {
     this.innerHTML = /* html */ `
       <div class="unidade-list-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
         <h2 style="margin:0;">Lista de Unidades</h2>
-        <button id="add-unidade-btn" class="outline">+ Adicionar Unidade</button>
+        <button id="add-unidade-btn" class="outline">+ <span class="d-sm-none">Adicionar Unidade</span></button>
       </div>
-      <table class="unidades-table">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Endereço</th>
-            <th>Telefone</th>
-            <th>Email</th>
-            <th>Site</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${this.unidades
-            .map(
-              (unidade) => /* html */ `
+      <div class="table-responsive">
+        <table class="unidades-table striped">
+          <thead>
             <tr>
-              <td>${unidade.nome}</td>
-              <td>${unidade.endereco}</td>
-              <td>${unidade.telefone || ""}</td>
-              <td>${unidade.email || ""}</td>
-              <td>${unidade.site || ""}</td>
-              <td>
-                <div class="unidade-list-actions">
-                    <button class="view-unidade-icon outline border-0" data-id="${
-                      unidade.id
-                    }" title="Visualizar">👁️</button>
-                    <button class="edit-unidade-icon outline border-0" data-id="${
-                      unidade.id
-                    }" title="Editar">✏️</button>
-                    <button class="delete-unidade-icon outline border-0" data-id="${
-                      unidade.id
-                    }" title="Excluir">🗑️</button>
-                </div>
-              </td>
+              <th>Nome</th>
+              <th>Endereço</th>
+              <th>Telefone</th>
+              <th>Email</th>
+              <th>Site</th>
+              <th class="text-end">Ações</th>
             </tr>
-          `
-            )
-            .join("")}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${this.unidades
+              .map(
+                (unidade) => /* html */ `
+              <tr>
+                <td>${unidade.nome}</td>
+                <td>${unidade.endereco}</td>
+                <td>${unidade.telefone || ""}</td>
+                <td>${unidade.email || ""}</td>
+                <td>${unidade.site || ""}</td>
+                <td>
+                  <div class="list-actions unidade-list-actions">
+                      <button class="view-unidade-icon outline border-0" data-id="${
+                        unidade.id
+                      }" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+                      <button class="edit-unidade-icon outline border-0" data-id="${
+                        unidade.id
+                      }" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                      <button class="delete-unidade-icon outline border-0" data-id="${
+                        unidade.id
+                      }" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
+                  </div>
+                </td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
     `;
     this.querySelector("#add-unidade-btn").onclick = (e) => {
       e.preventDefault();

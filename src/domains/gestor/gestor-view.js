@@ -8,7 +8,7 @@ export class GestorView {
     // Aqui você pode implementar a renderização no DOM
   }
 
-  renderLivrosPage(livros, onAdd, onEdit, onDelete, onView) {
+  renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares) {
     const container =
       document.getElementById("livros-list") ||
       document.querySelector("#app-content");
@@ -21,6 +21,7 @@ export class GestorView {
     livroList.onEdit = onEdit;
     livroList.onDelete = onDelete;
     livroList.onView = onView;
+    livroList.onEditExemplares = onEditExemplares;
   }
 
   renderLivroForm(onSubmit, livro = null, onBack = null) {
@@ -106,7 +107,7 @@ export class GestorView {
     document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
         <div class="livro-detalhe-header">
-          <button id="voltar-livro-detalhe" class="outline border-0">&larr;</button>
+          <button id="voltar-livro-detalhe" class="outline border-0"><i class="fa-solid fa-arrow-left"></i></button>
           <h2>${livro.titulo}</h2>
         </div>
         <p><strong>Autor:</strong> ${livro.autor}</p>
@@ -143,7 +144,7 @@ export class GestorView {
     document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
         <div class="unidade-detalhe-header">
-          <button id="voltar-unidade-detalhe" class="outline border-0">&larr;</button>
+          <button id="voltar-unidade-detalhe" class="outline border-0"><i class="fa-solid fa-arrow-left"></i></button>
           <h2>${unidade.nome}</h2>
         </div>
         <p><strong>Endereço:</strong> ${unidade.endereco}</p>
@@ -154,5 +155,74 @@ export class GestorView {
     `;
     document.getElementById("voltar-unidade-detalhe").onclick = () =>
       window.navigate && window.navigate("/unidades");
+  }
+
+  renderLivroExemplaresForm(livro, onSave, onBack) {
+    document.querySelector("#app-content").innerHTML = /* html */ `
+      <div class="form-container">
+        <div class="livro-form-header">
+          <button type="button" id="voltar-exemplares-btn" class="outline border-0"><i class="fa-solid fa-arrow-left"></i></button>
+          <h2 style="margin: 0;">Exemplares por Unidade</h2>
+        </div>
+        <form id="exemplares-form">
+          <div id="exemplares-unidades-list" style="margin:8px 0 16px 0;"></div>
+          <div class="livro-form-footer">
+            <button type="button" id="cancelar-exemplares-btn" class="outline">Cancelar</button>
+            <button type="submit">Salvar</button>
+          </div>
+        </form>
+      </div>
+    `;
+    // Renderiza lista de unidades e campos de exemplares
+    const unidades =
+      (window.gestorController &&
+        window.gestorController.service &&
+        window.gestorController.service.unidades) ||
+      [];
+    const exemplaresListDiv = document.getElementById(
+      "exemplares-unidades-list"
+    );
+    let exemplaresPorUnidade = [];
+    if (livro && livro.unidades) {
+      exemplaresPorUnidade = livro.unidades.map((u) => ({
+        unidade: u.unidade,
+        exemplares: u.exemplares,
+      }));
+    } else {
+      exemplaresPorUnidade = unidades.map((u) => ({
+        unidade: u,
+        exemplares: 0,
+      }));
+    }
+    const renderExemplaresList = () => {
+      exemplaresListDiv.innerHTML = exemplaresPorUnidade
+        .map(
+          (u) => `
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:8px;">
+          <span style="min-width:120px;">${u.unidade.nome}</span>
+          <input type="number" min="0" value="${u.exemplares}" data-id="${u.unidade.id}" style="width:60px;">
+        </div>
+      `
+        )
+        .join("");
+    };
+    renderExemplaresList();
+    exemplaresListDiv.addEventListener("input", (e) => {
+      if (e.target && e.target.type === "number") {
+        const id = parseInt(e.target.dataset.id);
+        const val = parseInt(e.target.value) || 0;
+        exemplaresPorUnidade = exemplaresPorUnidade.map((u) =>
+          u.unidade.id === id ? { ...u, exemplares: val } : u
+        );
+      }
+    });
+    document.getElementById("voltar-exemplares-btn").onclick = () =>
+      onBack && onBack();
+    document.getElementById("cancelar-exemplares-btn").onclick = () =>
+      onBack && onBack();
+    document.getElementById("exemplares-form").onsubmit = (e) => {
+      e.preventDefault();
+      onSave && onSave(exemplaresPorUnidade);
+    };
   }
 }

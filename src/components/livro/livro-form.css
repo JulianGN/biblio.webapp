@@ -28,6 +28,16 @@
 }
 
 .livro-unidade-header {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    align-items: flex-end;
+    width: 100%;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .livro-unidade-header {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
 }

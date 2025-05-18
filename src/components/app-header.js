@@ -8,7 +8,8 @@ class AppHeader extends HTMLElement {
     const isUnidades = path.startsWith("/unidades");
     this.innerHTML = /* html */ `
       <header id="main-header" class="header">
-        <img src="/assets/imgs/logotipo.png" alt="Logo Bibliotecas Conectadas" class="logo" id="logo-bibliotecas" />
+        <img src="/assets/imgs/logotipo.png" alt="Logo Bibliotecas Conectadas" class="logo logo--desktop" id="logo-bibliotecas" />
+        <img src="/assets/imgs/icone.png" alt="Logo Bibliotecas Conectadas" class="logo logo--mobile" id="logo-bibliotecas" />
         <nav role="group">
             <a href="#" id="nav-livros-btn" class="${
               isLivros ? "" : "outline"

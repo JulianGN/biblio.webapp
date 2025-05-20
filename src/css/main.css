@@ -29,6 +29,7 @@ body>main {
     padding: 1rem;
     overflow-x: hidden;
     overflow-y: auto;
+    min-height: 100dvh;
 }
 
 .app-content::-webkit-scrollbar {
@@ -48,4 +49,13 @@ body>main {
 .app-content {
     scrollbar-color: var(--color-primary) transparent;
     scrollbar-width: thin;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 420px;
+    margin: auto;
+    text-align: center;
+    background: #fffdf9;
+    padding: 1rem;
 }

@@ -173,6 +173,22 @@ class LivroForm extends HTMLElement {
         renderUnidadesList();
       };
       form.addEventListener("submit", (event) => {
+        // Validação extra: data e ISBN
+        const dataPub = form.data_publicacao?.value;
+        const isbn = form.isbn?.value;
+        let dataInvalida = false;
+        if (dataPub) {
+          const dataObj = new Date(dataPub);
+          const hoje = new Date();
+          if (isNaN(dataObj.getTime()) || dataObj > hoje) {
+            dataInvalida = true;
+          }
+        }
+        if ((dataInvalida || !dataPub) && (!isbn || isbn.trim() === "")) {
+          alert("Informe uma data de publicação válida ou um ISBN.");
+          event.preventDefault();
+          return false;
+        }
         // Adiciona as unidades selecionadas ao form para o controller
         if (form._livroUnidades && form._livroUnidades.length > 0) {
           form._unidadesPayload = form._livroUnidades.map((u) => ({

@@ -17,17 +17,6 @@ const authView = new AuthView();
 const gestorView = new GestorView();
 window.gestorView = gestorView;
 
-function startApp() {
-  gestorController.showLivrosPage();
-}
-
-function showLogin() {
-  authView.renderLogin((username, password) => {
-    authController.login(username, password);
-    startApp();
-  });
-}
-
 function navigate(path) {
   window.history.pushState({}, "", path);
   appRouter({
@@ -52,7 +41,4 @@ window.addEventListener("popstate", () =>
   })
 );
 
-// Inicialização
 appRouter({ gestorController, gestorView, authController, authView, navigate });
-
-// Exemplo: para navegação programática, use navigate('/login'), navigate('/livros'), etc.

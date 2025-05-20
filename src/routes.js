@@ -1,15 +1,22 @@
 import { gestorRoutes } from "./routes-gestor.js";
 import { authRoutes } from "./routes-auth.js";
 
-export function router({
+export async function router({
   gestorController,
   gestorView,
   authController,
   authView,
   navigate,
 }) {
-  if (gestorRoutes({ gestorController, gestorView, navigate })) return;
-  if (authRoutes({ authController, authView, navigate })) return;
+  const isGestorRoute = await gestorRoutes({
+    gestorController,
+    gestorView,
+    navigate,
+  });
+  if (isGestorRoute) return;
+
+  const isAuthRoute = await authRoutes({ authController, authView, navigate });
+  if (isAuthRoute) return;
   // Fallback: login
   navigate("/login");
 }

@@ -1,4 +1,9 @@
 export async function gestorRoutes({ gestorController, gestorView, navigate }) {
+  const path = window.location.pathname;
+  // Só processa rotas que começam com /livros ou /unidades
+  if (!/^\/(livros|unidades)/.test(path)) {
+    return false;
+  }
   function clearHeader() {
     const main = document.querySelector("main");
     if (main) main.remove();
@@ -11,7 +16,6 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
 
   clearHeader();
   window.scrollTo(0, 0);
-  const path = window.location.pathname;
 
   // Rotas dinâmicas para detalhes (devem vir antes do switch)
   if (/^\/livros\/[0-9]+\/detalhe$/.test(path)) {

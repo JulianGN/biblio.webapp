@@ -1,9 +1,10 @@
 // View de autenticação
 export class AuthView {
   renderLogin(onLogin) {
-    document.querySelector("#app").innerHTML = `
+    document.querySelector("#app-content").innerHTML = `
       <div class="login-container">
-        <form id="loginForm">
+        <img src="/assets/imgs/logo.png" alt="Logo Bibliotecas Conectadas" id="logo-bibliotecas" /> 
+        <form id="login-form">
           <h2>Login</h2>
           <div>
             <label for="username">Usuário:</label>
@@ -17,7 +18,7 @@ export class AuthView {
         </form>
       </div>
     `;
-    document.getElementById("loginForm").addEventListener("submit", (e) => {
+    document.getElementById("login-form").addEventListener("submit", (e) => {
       e.preventDefault();
       const username = document.getElementById("username").value;
       const password = document.getElementById("password").value;

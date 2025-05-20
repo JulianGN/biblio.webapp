@@ -67,8 +67,8 @@ export class GestorService extends BaseService {
   }
 
   // CRUD de Unidades
-  listarUnidades() {
-    return this.unidades;
+  async listarUnidades() {
+    return this.get("gestor/unidades/");
   }
 
   adicionarUnidade(unidadeData) {
@@ -98,5 +98,32 @@ export class GestorService extends BaseService {
     this.unidades = this.unidades.filter((u) => u.id !== unidadeId);
   }
 
-  // Outros métodos de negócio podem ser adicionados aqui
+  async getUnidadeById(id) {
+    return this.get(`gestor/unidades/${id}/`);
+  }
+
+  async atualizarUnidadeApi(unidadeId, unidadeData) {
+    const payload = { ...unidadeData };
+    return this.put(`gestor/unidades/${unidadeId}/`, payload);
+  }
+
+  async removerUnidadeApi(unidadeId) {
+    const response = await fetch(
+      this.baseUrl + `gestor/unidades/${unidadeId}/`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || `Erro ${response.status}`);
+    }
+    return true;
+  }
+
+  async adicionarUnidadeApi(unidadeData) {
+    const payload = { ...unidadeData };
+    return this.post("gestor/unidades/", payload);
+  }
 }

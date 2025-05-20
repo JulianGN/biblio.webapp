@@ -392,28 +392,64 @@ export class GestorController {
     );
   }
 
-  showUnidadesPage(callbacks = {}) {
+  async showUnidadesPage(callbacks = {}) {
     this.view = this.view || new GestorView();
+    let unidades = await this.service.listarUnidades();
+    unidades = Array.isArray(unidades) ? unidades : [];
+    this._unidadesCache = unidades;
+    this._lastCallbacks = callbacks;
     this.view.renderUnidadesPage(
-      this.service.listarUnidades(),
+      unidades,
       callbacks.onAdd || (() => {}),
       callbacks.onEdit || (() => {}),
-      callbacks.onDelete || (() => {})
+      callbacks.onDelete || (() => {}),
+      callbacks.onView || (() => {})
     );
   }
 
-  addUnidade(unidadeData) {
-    return this.service.adicionarUnidade(unidadeData);
+  async addUnidade(unidadeData) {
+    await this.service.adicionarUnidadeApi(unidadeData);
+    await this.showUnidadesPage(this._lastCallbacks);
   }
 
-  editUnidade(id, onBack = null) {
-    const unidade = this.service.listarUnidades().find((u) => u.id === id);
-    this.showUnidadeForm(unidade, onBack);
+  async editUnidade(id, onBack = null) {
+    this.view = this.view || new GestorView();
+    // Buscar unidade por id na API
+    const unidade = await this.service.getUnidadeById(id);
+    this.view.renderUnidadeForm(
+      async (form) => {
+        // Montar objeto com os dados do form
+        const unidadeData = {
+          nome: form.nome.value,
+          endereco: form.endereco.value,
+          telefone: form.telefone.value,
+          email: form.email.value,
+          site: form.site.value,
+        };
+        await this.service.atualizarUnidadeApi(id, unidadeData);
+        if (onBack) onBack();
+        else navigate("/unidades");
+      },
+      unidade,
+      onBack || (() => navigate("/unidades"))
+    );
   }
 
-  deleteUnidade(id) {
-    this.service.removerUnidade(id);
-    this.showUnidadesPage();
+  async deleteUnidade(id) {
+    await this.service.removerUnidadeApi(id);
+    // Remove da lista local se existir
+    if (this._unidadesCache) {
+      this._unidadesCache = this._unidadesCache.filter((u) => u.id !== id);
+      this.view.renderUnidadesPage(
+        this._unidadesCache,
+        this._lastCallbacks?.onAdd,
+        this._lastCallbacks?.onEdit,
+        this._lastCallbacks?.onDelete,
+        this._lastCallbacks?.onView
+      );
+    } else {
+      this.showUnidadesPage(this._lastCallbacks);
+    }
   }
 
   async deleteLivro(id) {
@@ -443,7 +479,7 @@ export class GestorController {
     this.view =
       this.view || new (await import("./gestor-view.js")).GestorView();
     this.view.renderUnidadeForm(
-      (form) => {
+      async (form) => {
         // Validação simples
         let isValid = true;
         if (!form.nome.value) {
@@ -472,7 +508,11 @@ export class GestorController {
           email: form.email.value,
           site: form.site.value,
         };
-        // Aqui você pode adicionar lógica para salvar a unidade futuramente
+        if (unidade && unidade.id) {
+          await this.service.atualizarUnidadeApi(unidade.id, unidadeData);
+        } else {
+          await this.addUnidade(unidadeData);
+        }
         if (onBack) onBack();
         else navigate("/unidades");
       },
@@ -511,8 +551,9 @@ export class GestorController {
     this.view.renderLivroDetalhe(livro);
   }
 
-  showUnidadeDetalhe(id) {
-    const unidade = this.service.unidades.find((u) => u.id === id);
+  async showUnidadeDetalhe(id) {
+    this.view = this.view || new GestorView();
+    const unidade = await this.service.getUnidadeById(id);
     this.view.renderUnidadeDetalhe(unidade);
   }
 }

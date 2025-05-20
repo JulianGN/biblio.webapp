@@ -49,7 +49,7 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
       `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
     );
     const id = parseInt(path.split("/")[2]);
-    gestorController.editUnidade(id, () => navigate("/unidades"));
+    await gestorController.editUnidade(id, () => navigate("/unidades"));
     return true;
   }
 
@@ -102,7 +102,7 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
       document.querySelector(
         "#app-content"
       ).innerHTML = `<div id="unidades-list"></div>`;
-      gestorController.showUnidadesPage({
+      await gestorController.showUnidadesPage({
         onAdd: () => navigate("/unidades/novo"),
         onEdit: (id) => navigate(`/unidades/${id}`),
         onDelete: (id) => {

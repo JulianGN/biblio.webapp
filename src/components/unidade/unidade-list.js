@@ -3,12 +3,12 @@ import "./unidade-list.css";
 // Web Component para a listagem de unidades (bibliotecas)
 class UnidadeList extends HTMLElement {
   set unidades(unidades) {
-    this._unidades = unidades;
+    this._unidades = Array.isArray(unidades) ? unidades : [];
     this.render();
   }
 
   get unidades() {
-    return this._unidades || [];
+    return Array.isArray(this._unidades) ? this._unidades : [];
   }
 
   set onEdit(callback) {
@@ -32,6 +32,7 @@ class UnidadeList extends HTMLElement {
   }
 
   render() {
+    const unidades = this.unidades;
     this.innerHTML = /* html */ `
       <div class="unidade-list-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
         <h2 style="margin:0;">Lista de Unidades</h2>
@@ -50,9 +51,11 @@ class UnidadeList extends HTMLElement {
             </tr>
           </thead>
           <tbody>
-            ${this.unidades
-              .map(
-                (unidade) => /* html */ `
+            ${
+              unidades.length > 0
+                ? unidades
+                    .map(
+                      (unidade) => /* html */ `
               <tr>
                 <td>${unidade.nome}</td>
                 <td>${unidade.endereco}</td>
@@ -74,8 +77,10 @@ class UnidadeList extends HTMLElement {
                 </td>
               </tr>
             `
-              )
-              .join("")}
+                    )
+                    .join("")
+                : '<tr><td colspan="6" style="text-align:center;color:#888;">Nenhuma unidade cadastrada.</td></tr>'
+            }
           </tbody>
         </table>
       </div>

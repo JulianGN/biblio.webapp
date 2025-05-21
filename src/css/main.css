@@ -59,3 +59,7 @@ body>main {
     background: #fffdf9;
     padding: 1rem;
 }
+
+.login-container input {
+    border: 1px solid var(--color-primary);
+}

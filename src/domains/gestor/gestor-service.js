@@ -13,7 +13,7 @@ export class GestorService extends BaseService {
     return this.get("gestor/livros/");
   }
 
-  obterObjetoComPropId(nomePropriedade, livroData) {
+  getObjectWithPropId(nomePropriedade, livroData) {
     return {
       [nomePropriedade]: typeof livroData[nomePropriedade] === "object"
         ? livroData[nomePropriedade].id
@@ -22,13 +22,13 @@ export class GestorService extends BaseService {
   }
 
   async adicionarLivro(livroData) {
-    const obterObjetoId = (nomePropriedade) => this.obterObjetoComPropId(nomePropriedade, livroData);
+    const getObjectId = (nomePropriedade) => this.getObjectWithPropId(nomePropriedade, livroData);
     const payload = {
       ...livroData,
-      ...obterObjetoId("genero"),
-      ...obterObjetoId("tipo_obra"),
+      ...getObjectId("genero"),
+      ...getObjectId("tipo_obra"),
       unidades: (livroData.unidades || []).map((u) => ({
-        ...obterObjetoId("unidade"),
+        ...this.getObjectWithPropId("unidade", u),
         exemplares: u.exemplares,
       })),
     };
@@ -40,13 +40,13 @@ export class GestorService extends BaseService {
   }
 
   async atualizarLivro(livroId, livroData) {
-    const obterObjetoId = (nomePropriedade) => this.obterObjetoComPropId(nomePropriedade, livroData);
+    const getObjectId = (nomePropriedade) => this.getObjectWithPropId(nomePropriedade, livroData);
     const payload = {
       ...livroData,
-      ...obterObjetoId("genero"),
-      ...obterObjetoId("tipo_obra"),
+      ...getObjectId("genero"),
+      ...getObjectId("tipo_obra"),
       unidades: (livroData.unidades || []).map((u) => ({
-        ...obterObjetoId("unidade"),
+        ...this.getObjectWithPropId("unidade", u),
         exemplares: u.exemplares,
       })),
     };

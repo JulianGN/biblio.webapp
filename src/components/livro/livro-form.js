@@ -8,13 +8,13 @@ class LivroForm extends HTMLElement {
 
   connectedCallback() {
     const isEdit = this.hasAttribute("edit");
-    const obterLista = (nomeLista) => window.gestorController &&
+    const getList = (nomeLista) => window.gestorController &&
         window.gestorController.initData &&
         window.gestorController.initData[nomeLista];
     const unidades =
-      this._unidadesDisponiveis || obterLista("unidades") || [];
+      this._unidadesDisponiveis || getList("unidades") || [];
     const tipoObras =
-      this._tipoObrasDisponiveis || obterLista("tipo_obras") || [];
+      this._tipoObrasDisponiveis || getList("tipo_obras") || [];
     this._livroUnidades =
       Array.isArray(this._livroUnidades) && this._livroUnidades.length > 0
         ? this._livroUnidades

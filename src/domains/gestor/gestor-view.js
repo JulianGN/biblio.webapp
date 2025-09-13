@@ -29,7 +29,8 @@ export class GestorView {
     livro = null,
     onBack = null,
     generos = [],
-    unidades = []
+    unidades = [],
+    tipo_obras = []
   ) {
     document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
@@ -98,6 +99,29 @@ export class GestorView {
     }
     if (livro && livro.genero && generoSelect) {
       generoSelect.value = livro.genero;
+    }
+    // Substituir input de tipo_obra por select de forma robusta
+    let tipoObraSelect = null;
+    let tipoObraInput = livroFormEl.querySelector(
+      'input[name="tipo_obra"], input#tipo_obra'
+    );
+    if (tipoObraInput) {
+      const tipoDiv = tipoObraInput.closest("div");
+      if (tipoDiv) {
+        tipoDiv.innerHTML = `
+          <label for="tipo_obra">Tipo de Obra:</label>
+          <select id="tipo_obra" name="tipo_obra">
+            <option value="">Selecione o tipo de obra</option>
+            ${tipo_obras
+              .map((t) => `<option value="${t.id}">${t.nome}</option>`)
+              .join("")}
+          </select>
+        `;
+        tipoObraSelect = tipoDiv.querySelector("select#tipo_obra");
+      }
+    }
+    if (livro && livro.tipo_obra && tipoObraSelect) {
+      tipoObraSelect.value = livro.tipo_obra;
     }
     livroFormEl.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -168,6 +192,9 @@ export class GestorView {
           <div><b>Idioma:</b> ${livro.idioma || "-"}</div>
           <div><b>Gênero:</b> ${
             livro.generoObj && livro.generoObj.nome ? livro.generoObj.nome : "-"
+          }</div>
+          <div><b>Tipo de Obra:</b> ${
+            livro.tipo_obraObj && livro.tipo_obraObj.nome ? livro.tipo_obraObj.nome : "-"
           }</div>
         </div>
         <hr/>

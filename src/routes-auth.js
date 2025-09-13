@@ -16,7 +16,7 @@ export async function authRoutes({ authController, authView, navigate }) {
     case "/login":
       document.body.insertAdjacentHTML(
         "afterbegin",
-        `<main><div id="app-content" class="app-content"></div></main>`
+        `<main class="main-login"><div id="app-content" class="app-content"></div></main>`
       );
       authView.renderLogin((username, password) => {
         authController.login(username, password);

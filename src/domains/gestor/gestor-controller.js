@@ -16,8 +16,8 @@ const navigate =
 export class GestorController {
   constructor() {
     this.service = new GestorService();
-    this.initService = new GestorInitService();
-    this.initData = { generos: [], unidades: [] };
+  this.initService = new GestorInitService();
+  this.initData = { generos: [], unidades: [], tipo_obras: [] };
   }
 
   async fetchInitData() {
@@ -83,7 +83,8 @@ export class GestorController {
       form.paginas.value = livro.paginas || "";
       form.capa.value = livro.capa || "";
       form.idioma.value = livro.idioma || "";
-      form.genero.value = livro.genero || "";
+  form.genero.value = livro.genero || "";
+  if (form.tipo_obra) form.tipo_obra.value = livro.tipo_obra || "";
       if (!form.querySelector("#livroId")) {
         const hiddenIdInput = document.createElement("input");
         hiddenIdInput.type = "hidden";
@@ -153,6 +154,7 @@ export class GestorController {
           capa: data.capa,
           idioma: data.idioma,
           genero: parseInt(data.genero) || 0,
+          tipo_obra: parseInt(data.tipo_obra) || 0,
           unidades: unidades,
         };
         if (livroId) {
@@ -205,6 +207,12 @@ export class GestorController {
         },
         exemplares: u.exemplares,
       })),
+      generoObj:
+        this.initData.generos.find((g) => g.id === (livro.genero?.id || livro.genero)) ||
+        { id: livro.genero, nome: `Gênero ${livro.genero}` },
+      tipo_obraObj:
+        this.initData.tipo_obras.find((t) => t.id === (livro.tipo_obra?.id || livro.tipo_obra)) ||
+        { id: livro.tipo_obra, nome: `Tipo ${livro.tipo_obra}` },
     }));
     this._livrosCache = livros;
     this._lastCallbacks = callbacks;
@@ -282,6 +290,7 @@ export class GestorController {
           capa: getValue("capa") || livroBase.capa || "",
           idioma: getValue("idioma") || livroBase.idioma || "",
           genero: getNumber("genero") ?? livroBase.genero ?? 0,
+          tipo_obra: getNumber("tipo_obra") ?? livroBase.tipo_obra ?? 0,
         };
         let isValid = true;
         const displayFieldError = (input, msg) => {
@@ -347,11 +356,12 @@ export class GestorController {
         }
         if (onBack) onBack();
         else navigate("/livros");
-      },
-      livro,
-      onBack || (() => navigate("/livros")),
-      this.initData.generos,
-      this.initData.unidades
+  },
+  livro,
+  onBack || (() => navigate("/livros")),
+  this.initData.generos,
+  this.initData.unidades,
+  this.initData.tipo_obras
     );
   }
 
@@ -548,6 +558,10 @@ export class GestorController {
     livro.generoObj = this.initData.generos.find(
       (g) => g.id === (livro.genero?.id || livro.genero)
     ) || { id: livro.genero, nome: `Gênero ${livro.genero}` };
+    // Mapear tipo_obra para objeto completo
+    livro.tipo_obraObj = this.initData.tipo_obras.find(
+      (t) => t.id === (livro.tipo_obra?.id || livro.tipo_obra)
+    ) || { id: livro.tipo_obra, nome: `Tipo ${livro.tipo_obra}` };
     this.view.renderLivroDetalhe(livro);
   }
 

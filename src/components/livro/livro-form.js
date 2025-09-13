@@ -8,12 +8,13 @@ class LivroForm extends HTMLElement {
 
   connectedCallback() {
     const isEdit = this.hasAttribute("edit");
-    const unidades =
-      this._unidadesDisponiveis ||
-      (window.gestorController &&
+    const obterLista = (nomeLista) => window.gestorController &&
         window.gestorController.initData &&
-        window.gestorController.initData.unidades) ||
-      [];
+        window.gestorController.initData[nomeLista];
+    const unidades =
+      this._unidadesDisponiveis || obterLista("unidades") || [];
+    const tipoObras =
+      this._tipoObrasDisponiveis || obterLista("tipo_obras") || [];
     this._livroUnidades =
       Array.isArray(this._livroUnidades) && this._livroUnidades.length > 0
         ? this._livroUnidades
@@ -72,10 +73,19 @@ class LivroForm extends HTMLElement {
                     <label for="idioma">Idioma:</label>
                     <input type="text" id="idioma" name="idioma">
                 </div>
-                <div>
-                    <label for="genero">Gênero (ID):</label>
-                    <input type="number" id="genero" name="genero">
-                </div>
+        <div>
+          <label for="genero">Gênero (ID):</label>
+          <input type="number" id="genero" name="genero">
+        </div>
+        <div>
+          <label for="tipo_obra">Tipo de Obra:</label>
+          <select id="tipo_obra" name="tipo_obra">
+            <option value="">Selecione o tipo de obra</option>
+            ${tipoObras
+            .map((t) => `<option value="${t.id}">${t.nome}</option>`)
+            .join("")}
+          </select>
+        </div>
                 <div class="livro-unidade-header">
                     <div class="livro-unidade">
                   <label for="unidade-select">Unidade:</label>
@@ -200,6 +210,8 @@ class LivroForm extends HTMLElement {
             { unidade: unidades[0]?.id || 1, exemplares: 1 },
           ];
         }
+        // Tipo de obra selecionado
+        form._tipoObraValue = form.querySelector('[name="tipo_obra"]')?.value || null;
       });
       // Preencher campos do formulário ao editar
       if (isEdit && this._livroSelecionado) {
@@ -216,6 +228,7 @@ class LivroForm extends HTMLElement {
           if (form.capa) form.capa.value = livro.capa || "";
           if (form.idioma) form.idioma.value = livro.idioma || "";
           if (form.genero) form.genero.value = livro.genero || "";
+          if (form.tipo_obra) form.tipo_obra.value = livro.tipo_obra || "";
         }
       }
       // Renderizar lista de unidades já escolhidas imediatamente ao abrir

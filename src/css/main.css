@@ -15,7 +15,7 @@
     --color-accent3: #F3A04E;
 }
 
-body>main {
+body>main:not(.main-login) {
     height: 100dvh;
     padding: 0;
     margin: 0;
@@ -29,7 +29,6 @@ body>main {
     padding: 1rem;
     overflow-x: hidden;
     overflow-y: auto;
-    min-height: 100dvh;
 }
 
 .app-content::-webkit-scrollbar {

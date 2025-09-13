@@ -13,6 +13,7 @@ export class Livro {
     capa,
     idioma,
     genero,
+    tipo_obra,
     unidades = [], // [{ unidade: { id: 1, nome: Teste }, exemplares: 5 }],
   }) {
     this.id = id;
@@ -25,6 +26,7 @@ export class Livro {
     this.capa = capa;
     this.idioma = idioma;
     this.genero = genero;
+    this.tipo_obra = tipo_obra;
     this.unidades = unidades;
   }
 }

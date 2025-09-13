@@ -13,16 +13,22 @@ export class GestorService extends BaseService {
     return this.get("gestor/livros/");
   }
 
+  obterObjetoComPropId(nomePropriedade, livroData) {
+    return {
+      [nomePropriedade]: typeof livroData[nomePropriedade] === "object"
+        ? livroData[nomePropriedade].id
+        : livroData[nomePropriedade]
+    };
+  }
+
   async adicionarLivro(livroData) {
-    // Monta o payload conforme esperado pela API
+    const obterObjetoId = (nomePropriedade) => this.obterObjetoComPropId(nomePropriedade, livroData);
     const payload = {
       ...livroData,
-      genero:
-        typeof livroData.genero === "object"
-          ? livroData.genero.id
-          : livroData.genero,
+      ...obterObjetoId("genero"),
+      ...obterObjetoId("tipo_obra"),
       unidades: (livroData.unidades || []).map((u) => ({
-        unidade: typeof u.unidade === "object" ? u.unidade.id : u.unidade,
+        ...obterObjetoId("unidade"),
         exemplares: u.exemplares,
       })),
     };
@@ -34,15 +40,13 @@ export class GestorService extends BaseService {
   }
 
   async atualizarLivro(livroId, livroData) {
-    // Monta o payload igual ao adicionarLivro
+    const obterObjetoId = (nomePropriedade) => this.obterObjetoComPropId(nomePropriedade, livroData);
     const payload = {
       ...livroData,
-      genero:
-        typeof livroData.genero === "object"
-          ? livroData.genero.id
-          : livroData.genero,
+      ...obterObjetoId("genero"),
+      ...obterObjetoId("tipo_obra"),
       unidades: (livroData.unidades || []).map((u) => ({
-        unidade: typeof u.unidade === "object" ? u.unidade.id : u.unidade,
+        ...obterObjetoId("unidade"),
         exemplares: u.exemplares,
       })),
     };
@@ -62,7 +66,6 @@ export class GestorService extends BaseService {
       const error = await response.text();
       throw new Error(error || `Erro ${response.status}`);
     }
-    // Não tenta fazer response.json() se status 204
     return true;
   }
 

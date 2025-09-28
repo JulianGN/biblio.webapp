@@ -1,4 +1,6 @@
 import "./livro-list.css";
+// ADICIONADO
+import { http } from "../api";
 
 // Web Component para a lista de livros
 class LivroList extends HTMLElement {
@@ -78,6 +80,18 @@ class LivroList extends HTMLElement {
                 </div>
             </div>
         `;
+    // ADICIONADO: carrega da API se nenhum dado tiver sido passado via setter
+    if (!this._livros || this._livros.length === 0) {
+      (async () => {
+        try {
+          const { data } = await http.get("/livros");
+          this._livros = Array.isArray(data) ? data : (data?.results || []);
+          this.render();
+        } catch (e) {
+          console.error("Falha ao carregar livros:", e);
+        }
+      })();
+    }
   }
 
   // Método para renderizar a lista de livros
@@ -187,10 +201,24 @@ class LivroList extends HTMLElement {
           };
         });
         this.querySelectorAll(".delete-livro-icon").forEach((btn) => {
-          btn.onclick = (e) => {
+          // ADICIONADO: exclusão via API quando não houver callback externo
+          btn.onclick = async (e) => {
             e.preventDefault();
+            const id = parseInt(btn.dataset.id);
             if (window.confirm("Tem certeza que deseja excluir este livro?")) {
-              if (this._onDelete) this._onDelete(parseInt(btn.dataset.id));
+              if (this._onDelete) {
+                this._onDelete(id);
+              } else {
+                try {
+                  await http.delete(`/livros/${id}`);
+                  this._livros = (this._livros || []).filter((l) => l.id !== id);
+                  this.render();
+                } catch (err) {
+                  console.error(err);
+                  const msg = err?.response?.data?.message || err?.message || "Erro ao excluir o livro.";
+                  alert(msg);
+                }
+              }
             }
           };
         });
@@ -221,10 +249,24 @@ class LivroList extends HTMLElement {
       };
     });
     this.querySelectorAll(".delete-livro-icon").forEach((btn) => {
-      btn.onclick = (e) => {
+      // ADICIONADO: exclusão via API quando não houver callback externo
+      btn.onclick = async (e) => {
         e.preventDefault();
+        const id = parseInt(btn.dataset.id);
         if (window.confirm("Tem certeza que deseja excluir este livro?")) {
-          if (this._onDelete) this._onDelete(parseInt(btn.dataset.id));
+          if (this._onDelete) {
+            this._onDelete(id);
+          } else {
+            try {
+              await http.delete(`/livros/${id}`);
+              this._livros = (this._livros || []).filter((l) => l.id !== id);
+              this.render();
+            } catch (err) {
+              console.error(err);
+              const msg = err?.response?.data?.message || err?.message || "Erro ao excluir o livro.";
+              alert(msg);
+            }
+          }
         }
       };
     });
@@ -249,3 +291,4 @@ class LivroList extends HTMLElement {
 }
 
 customElements.define("livro-list", LivroList);
+

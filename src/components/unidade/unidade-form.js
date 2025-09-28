@@ -1,4 +1,6 @@
 import "./unidade-form.css";
+// ADICIONADO
+import { http } from "../api";
 
 // Web Component para o formulário de unidade (biblioteca)
 class UnidadeForm extends HTMLElement {
@@ -51,6 +53,55 @@ class UnidadeForm extends HTMLElement {
           e.preventDefault();
           window.navigate && window.navigate("/unidades");
         };
+
+      // ADICIONADO: pré-preencher campos quando estiver editando
+      const form = this.querySelector("#unidade-form");
+      if (isEdit && this._unidadeSelecionada && form) {
+        const u = this._unidadeSelecionada;
+        if (form.nome) form.nome.value = u.nome || "";
+        if (form.endereco) form.endereco.value = u.endereco || "";
+        if (form.telefone) form.telefone.value = u.telefone || "";
+        if (form.email) form.email.value = u.email || "";
+        if (form.site) form.site.value = u.site || "";
+      }
+
+      // ADICIONADO: submit via API (POST/PUT)
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        // Monta payload
+        const payload = {
+          nome: form.nome?.value?.trim() || "",
+          endereco: form.endereco?.value?.trim() || "",
+          telefone: form.telefone?.value?.trim() || "",
+          email: form.email?.value?.trim() || "",
+          site: form.site?.value?.trim() || "",
+        };
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn?.textContent;
+        if (submitBtn) submitBtn.textContent = isEdit ? "Salvando..." : "Criando...";
+
+        // Descobre ID em edição (ajuste a chave se seu objeto usar outro nome)
+        const unidadeId = this._unidadeSelecionada?.id || this._unidadeSelecionada?.unidade_id;
+
+        try {
+          if (isEdit && unidadeId) {
+            await http.put(`/unidades/${unidadeId}`, payload);
+            alert("Unidade atualizada com sucesso!");
+          } else {
+            await http.post("/unidades", payload);
+            alert("Unidade criada com sucesso!");
+          }
+          window.navigate && window.navigate("/unidades");
+        } catch (err) {
+          console.error(err);
+          const msg = err?.response?.data?.message || err?.message || "Erro ao salvar a unidade.";
+          alert(msg);
+        } finally {
+          if (submitBtn) submitBtn.textContent = originalText || "Salvar Unidade";
+        }
+      });
     }, 0);
   }
 }

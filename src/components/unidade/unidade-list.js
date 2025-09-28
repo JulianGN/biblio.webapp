@@ -1,4 +1,6 @@
 import "./unidade-list.css";
+// ADICIONADO
+import { http } from "../api";
 
 // Web Component para a listagem de unidades (bibliotecas)
 class UnidadeList extends HTMLElement {
@@ -29,6 +31,25 @@ class UnidadeList extends HTMLElement {
   set onAdd(callback) {
     this._onAdd = callback;
     this.render();
+  }
+
+  // ADICIONADO: carregar da API se nada vier pelo setter
+  connectedCallback() {
+    if (!this._unidades || this._unidades.length === 0) {
+      (async () => {
+        try {
+          const { data } = await http.get("/unidades");
+          this._unidades = Array.isArray(data) ? data : (data?.results || []);
+          this.render();
+        } catch (e) {
+          console.error("Falha ao carregar unidades:", e);
+          this._unidades = [];
+          this.render();
+        }
+      })();
+    } else {
+      this.render();
+    }
   }
 
   render() {
@@ -96,10 +117,24 @@ class UnidadeList extends HTMLElement {
       };
     });
     this.querySelectorAll(".delete-unidade-icon").forEach((btn) => {
-      btn.onclick = (e) => {
+      // ADICIONADO: exclusão via API quando não houver callback externo
+      btn.onclick = async (e) => {
         e.preventDefault();
+        const id = parseInt(btn.dataset.id);
         if (window.confirm("Tem certeza que deseja excluir esta unidade?")) {
-          if (this._onDelete) this._onDelete(parseInt(btn.dataset.id));
+          if (this._onDelete) {
+            this._onDelete(id);
+          } else {
+            try {
+              await http.delete(`/unidades/${id}`);
+              this._unidades = (this._unidades || []).filter((u) => u.id !== id);
+              this.render();
+            } catch (err) {
+              console.error(err);
+              const msg = err?.response?.data?.message || err?.message || "Erro ao excluir a unidade.";
+              alert(msg);
+            }
+          }
         }
       };
     });

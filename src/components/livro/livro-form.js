@@ -1,4 +1,6 @@
 import "./livro-form.css";
+// ADICIONADO
+import { http } from "../api"; // ajusta o caminho se o seu api.js estiver em outra pasta
 
 // Web Component para o formulário de livro
 class LivroForm extends HTMLElement {
@@ -183,6 +185,9 @@ class LivroForm extends HTMLElement {
         renderUnidadesList();
       };
       form.addEventListener("submit", (event) => {
+        // ADICIONADO: impedir submit nativo para tratarmos via API
+        event.preventDefault();
+
         // Validação extra: data e ISBN
         const dataPub = form.data_publicacao?.value;
         const isbn = form.isbn?.value;
@@ -196,7 +201,6 @@ class LivroForm extends HTMLElement {
         }
         if ((dataInvalida || !dataPub) && (!isbn || isbn.trim() === "")) {
           alert("Informe uma data de publicação válida ou um ISBN.");
-          event.preventDefault();
           return false;
         }
         // Adiciona as unidades selecionadas ao form para o controller
@@ -212,6 +216,47 @@ class LivroForm extends HTMLElement {
         }
         // Tipo de obra selecionado
         form._tipoObraValue = form.querySelector('[name="tipo_obra"]')?.value || null;
+
+        // ADICIONADO: montagem do payload final
+        const payload = {
+          titulo: form.titulo?.value?.trim() || "",
+          autor: form.autor?.value?.trim() || "",
+          editora: form.editora?.value?.trim() || "",
+          data_publicacao: form.data_publicacao?.value || null,
+          isbn: form.isbn?.value?.trim() || "",
+          paginas: form.paginas?.value ? Number(form.paginas.value) : null,
+          capa: form.capa?.value?.trim() || "",
+          idioma: form.idioma?.value?.trim() || "",
+          genero: form.genero?.value ? Number(form.genero.value) : null,
+          tipo_obra: form._tipoObraValue ? Number(form._tipoObraValue) : null,
+          unidades: form._unidadesPayload || [],
+        };
+
+        // ADICIONADO: chamada à API (POST ou PUT)
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn?.textContent;
+        if (submitBtn) submitBtn.textContent = isEdit ? "Salvando..." : "Criando...";
+
+        const livroId = this._livroSelecionado?.id || this._livroSelecionado?.livro_id;
+
+        (async () => {
+          try {
+            if (isEdit && livroId) {
+              await http.put(`/livros/${livroId}`, payload);
+              alert("Livro atualizado com sucesso!");
+            } else {
+              await http.post("/livros", payload);
+              alert("Livro criado com sucesso!");
+            }
+            window.navigate && window.navigate("/livros");
+          } catch (err) {
+            console.error(err);
+            const msg = err?.response?.data?.message || err?.message || "Erro ao salvar o livro.";
+            alert(msg);
+          } finally {
+            if (submitBtn) submitBtn.textContent = originalText || "Salvar Livro";
+          }
+        })();
       });
       // Preencher campos do formulário ao editar
       if (isEdit && this._livroSelecionado) {

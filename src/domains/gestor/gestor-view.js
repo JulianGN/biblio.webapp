@@ -8,7 +8,7 @@ export class GestorView {
     // Aqui você pode implementar a renderização no DOM
   }
 
-  renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares) {
+  renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares, onFilter = null, initData = {}) {
     const container =
       document.getElementById("livros-list") ||
       document.querySelector("#app-content");
@@ -22,6 +22,8 @@ export class GestorView {
     livroList.onDelete = onDelete;
     livroList.onView = onView;
     livroList.onEditExemplares = onEditExemplares;
+    livroList.onFilter = onFilter;
+    livroList.initData = initData;
   }
 
   renderLivroForm(

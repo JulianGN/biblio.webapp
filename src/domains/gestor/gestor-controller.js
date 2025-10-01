@@ -194,10 +194,39 @@ export class GestorController {
     );
   }
 
-  async showLivrosPage(callbacks = {}) {
+  async showLivrosPage(callbacks = {}, filters = {}) {
     this.view = this.view || new GestorView();
-    // Busca livros da API
-    let livros = await this.service.listarLivros();
+    
+    // Garante que os dados iniciais estejam carregados
+    if (!this.initData.generos || this.initData.generos.length === 0) {
+      await this.fetchInitData();
+    }
+    
+    // Busca livros da API com filtros
+    await this.refreshLivrosList(filters);
+    
+    // Callback para filtros - recarrega apenas a lista
+    const onFilter = async (newFilters) => {
+      await this.refreshLivrosList(newFilters);
+    };
+    
+    this.view.renderLivrosPage(
+      this._livrosCache,
+      callbacks.onAdd,
+      callbacks.onEdit,
+      callbacks.onDelete,
+      callbacks.onView,
+      callbacks.onEditExemplares,
+      onFilter,
+      this.initData
+    );
+    
+    this._lastCallbacks = callbacks;
+  }
+
+  async refreshLivrosList(filters = {}) {
+    // Busca livros da API com filtros
+    let livros = await this.service.listarLivros(filters);
     livros = livros.map((livro) => ({
       ...livro,
       unidades: (livro.unidades || []).map((u) => ({
@@ -215,15 +244,12 @@ export class GestorController {
         { id: livro.tipo_obra, nome: `Tipo ${livro.tipo_obra}` },
     }));
     this._livrosCache = livros;
-    this._lastCallbacks = callbacks;
-    this.view.renderLivrosPage(
-      livros,
-      callbacks.onAdd,
-      callbacks.onEdit,
-      callbacks.onDelete,
-      callbacks.onView,
-      callbacks.onEditExemplares
-    );
+    
+    // Atualiza apenas a lista no componente existente
+    const livroListComponent = document.querySelector("livro-list");
+    if (livroListComponent) {
+      livroListComponent.livros = livros;
+    }
   }
 
   async editLivro(id, onBack = null) {

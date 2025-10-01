@@ -9,8 +9,29 @@ export class GestorService extends BaseService {
   }
 
   // CRUD de Livros
-  async listarLivros() {
-    return this.get("gestor/livros/");
+  async listarLivros(filters = {}) {
+    let url = "gestor/livros/";
+    const queryParams = new URLSearchParams();
+    
+    if (filters.titulo) queryParams.append('titulo', filters.titulo);
+    if (filters.autor) queryParams.append('autor', filters.autor);
+    if (filters.tipo_obra) queryParams.append('tipo_obra', filters.tipo_obra);
+    if (filters.editora) queryParams.append('editora', filters.editora);
+    if (filters.isbn) queryParams.append('isbn', filters.isbn);
+    if (filters.unidades) {
+      // Suporte tanto para valor único quanto array (para compatibilidade)
+      if (Array.isArray(filters.unidades)) {
+        queryParams.append('unidades', filters.unidades.join(','));
+      } else {
+        queryParams.append('unidades', filters.unidades);
+      }
+    }
+    
+    if (queryParams.toString()) {
+      url += '?' + queryParams.toString();
+    }
+    
+    return this.get(url);
   }
 
   getObjectWithPropId(nomePropriedade, livroData) {

@@ -1,6 +1,6 @@
 import "./unidade-list.css";
 // ADICIONADO
-import { http } from "../api";
+import api from "../../api.js";
 
 // Web Component para a listagem de unidades (bibliotecas)
 class UnidadeList extends HTMLElement {

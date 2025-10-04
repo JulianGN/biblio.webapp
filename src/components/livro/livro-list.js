@@ -1,6 +1,6 @@
 import "./livro-list.css";
 // ADICIONADO
-import { http } from "../../api";
+import api from "../../api.js";
 
 // Web Component para a lista de livros
 class LivroList extends HTMLElement {

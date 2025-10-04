@@ -1,6 +1,6 @@
 import "./livro-form.css";
 // ADICIONADO
-import { http } from "../../api"; // ajusta o caminho se o seu api.js estiver em outra pasta
+import { http } from "../../api.js"; // ajusta o caminho se o seu api.js estiver em outra pasta
 
 // Web Component para o formulário de livro
 class LivroForm extends HTMLElement {

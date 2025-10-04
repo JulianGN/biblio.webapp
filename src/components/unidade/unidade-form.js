@@ -1,6 +1,6 @@
 import "./unidade-form.css";
 // ADICIONADO
-import { http } from "../api";
+import { http } from "../../api.js";
 
 // Web Component para o formulário de unidade (biblioteca)
 class UnidadeForm extends HTMLElement {

@@ -1,6 +1,6 @@
-// 📁 src/components/livro-form.js (ajuste o caminho conforme seu projeto)
+// 📁 src/components/livro/livro-form.js
 import "./livro-form.css";
-import { BaseService } from "../domains/base-service"; // ⬅️ ajuste o caminho se necessário
+import { BaseService } from "../../domains/base-service"; 
 
 // Instância única de API para este módulo
 const api = new BaseService();

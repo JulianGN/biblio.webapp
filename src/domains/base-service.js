@@ -1,28 +1,13 @@
-// src/domains/base-service.js
+// 📁 src/domains/base-service.js
 export class BaseService {
   constructor(baseUrl) {
-    const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
     const envUrl = import.meta?.env?.VITE_API_BASE_URL?.trim();
-
-    // Em DEV aceita fallback para http://localhost:8000/
-    // Em PRODUÇÃO exige VITE_API_BASE_URL (evita apontar para a mesma origem /api e tomar 404 na Vercel)
-    if (!baseUrl) {
-      if (envUrl) {
-        this.baseUrl = envUrl.endsWith("/") ? envUrl : envUrl + "/";
-      } else if (isLocalhost) {
-        this.baseUrl = "http://localhost:8000/";
-      } else {
-        // Falha explícita para não mascarar erro de rota inexistente na Vercel
-        throw new Error(
-          "VITE_API_BASE_URL não definida em produção. Configure a URL do backend (ex.: https://<sua-api>.railway.app/)."
-        );
-      }
-    } else {
-      this.baseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
-    }
+    const resolved = (baseUrl || envUrl || "https://biblio-webapi.onrender.com/").trim();
+    this.baseUrl = resolved.endsWith("/") ? resolved : resolved + "/";
+    this.defaultTimeoutMs = 20000; // 20s
   }
 
-  async request(endpoint, { method = "GET", body, headers = {} } = {}) {
+  async request(endpoint, { method = "GET", body, headers = {}, timeoutMs } = {}) {
     const token = localStorage.getItem("token") || null;
 
     const finalHeaders = {
@@ -33,6 +18,9 @@ export class BaseService {
 
     const url = this.baseUrl + String(endpoint).replace(/^\//, "");
 
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs ?? this.defaultTimeoutMs);
+
     let response;
     try {
       response = await fetch(url, {
@@ -40,34 +28,55 @@ export class BaseService {
         headers: finalHeaders,
         body: body ? JSON.stringify(body) : undefined,
         redirect: "follow",
+        signal: controller.signal,
       });
     } catch (err) {
+      clearTimeout(id);
       console.error("❌ Network/Fetch error:", err);
+      if (err.name === "AbortError") {
+        throw new Error("Tempo de requisição excedido. Tente novamente.");
+      }
       throw new Error("Falha de rede ao acessar a API. Verifique a URL e o CORS.");
+    } finally {
+      clearTimeout(id);
     }
 
-    // Trata 204 (sem corpo)
+    // 204 = No Content
     if (response.status === 204) return {};
 
-    const raw = await response.text();
+    const contentType = response.headers.get("content-type") || "";
 
+    // Erros HTTP
     if (!response.ok) {
-      // Ajuda a identificar o 404 de Vercel (rota inexistente)
+      // Dica específica se algum dia apontar para /api na Vercel sem rewrite
       const vercelHint = response.headers.get("x-vercel-error");
+      const raw = await response.text().catch(() => "");
       if (vercelHint === "NOT_FOUND") {
-        throw new Error(
-          `Rota inexistente na Vercel (404 NOT_FOUND). Verifique se o frontend está chamando a API certa. URL: ${url}`
-        );
+        throw new Error(`404 (Vercel NOT_FOUND). Verifique a rota/proxy. URL: ${url}`);
       }
       throw new Error(raw || `Erro ${response.status}: ${response.statusText}`);
     }
 
-    // Conteúdo pode ser vazio ou não-JSON
-    if (!raw) return {};
+    // Parse pelo Content-Type
+    if (contentType.includes("application/json")) {
+      // Pode vir vazio mesmo com header JSON
+      const text = await response.text();
+      return text ? JSON.parse(text) : {};
+    }
+
+    if (contentType.includes("text/")) {
+      return await response.text();
+    }
+
+    // Fallback: tentar blob/arrayBuffer conforme necessidade
     try {
-      return JSON.parse(raw);
+      return await response.json();
     } catch {
-      return raw; // fallback: texto simples
+      try {
+        return await response.text();
+      } catch {
+        return {}; // último recurso
+      }
     }
   }
 

@@ -1,16 +1,20 @@
+// 📁 src/components/livro-list.js  (ajuste o caminho conforme seu projeto)
 import "./livro-list.css";
-// ADICIONADO
-import api from "../../api.js";
+import { BaseService } from "../domains/base-service"; // ⬅️ ajuste o path se necessário
+
+// Instância única de API para este módulo
+const api = new BaseService();
 
 // Web Component para a lista de livros
 class LivroList extends HTMLElement {
   constructor() {
     super();
     this._search = "";
+    this._livros = [];
   }
 
   set livros(livros) {
-    this._livros = livros;
+    this._livros = Array.isArray(livros) ? livros : [];
     this.render();
   }
 
@@ -48,47 +52,31 @@ class LivroList extends HTMLElement {
     const s = this._search.toLowerCase();
     return this.livros.filter(
       (livro) =>
-        (livro.titulo && livro.titulo.toLowerCase().includes(s)) ||
-        (livro.autor && livro.autor.toLowerCase().includes(s)) ||
-        (livro.isbn && livro.isbn.toLowerCase().includes(s))
+        (livro.titulo && String(livro.titulo).toLowerCase().includes(s)) ||
+        (livro.autor && String(livro.autor).toLowerCase().includes(s)) ||
+        (livro.isbn && String(livro.isbn).toLowerCase().includes(s))
     );
   }
 
   connectedCallback() {
-    this.innerHTML = `
-            <div id="livroList">
-                <h2>Lista de Livros</h2>
-                <div class="livro-list-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                    <input type="search" id="busca-livro" placeholder="Buscar livro..." value="${
-                      this._search || ""
-                    }">
-                </div>
-                <div class="table-responsive">
-                  <table class="livros-table striped">
-                      <thead>
-                          <tr>
-                              <th>Título</th>
-                              <th>Autor</th>
-                              <th>ISBN</th>
-                              <th class="text-end">Ações</th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          <!-- Linhas da tabela serão adicionadas aqui -->
-                      </tbody>
-                  </table>
-                </div>
-            </div>
-        `;
-    // ADICIONADO: carrega da API se nenhum dado tiver sido passado via setter
+    this.render();
+
+    // Carrega da API se nenhum dado tiver sido passado via setter
     if (!this._livros || this._livros.length === 0) {
       (async () => {
         try {
-          const { data } = await http.get("/livros");
+          const data = await api.get("gestor/livros/"); // ← sem /api
+          // aceita array direto ou objeto com results
           this._livros = Array.isArray(data) ? data : (data?.results || []);
           this.render();
         } catch (e) {
           console.error("Falha ao carregar livros:", e);
+          // mostra placeholder de erro
+          const tbody = this.querySelector("#livros-tbody");
+          if (tbody) {
+            tbody.innerHTML =
+              `<tr><td colspan="4" style="text-align:center;color:#c00;">Falha ao carregar livros.</td></tr>`;
+          }
         }
       })();
     }
@@ -103,9 +91,7 @@ class LivroList extends HTMLElement {
         <button id="add-livro-btn" class="outline">+ <span class="d-sm-none">Adicionar Livro</span></button>
       </div>
       <div class="livro-list-search" style="margin-bottom:1rem;">
-        <input type="search" id="busca-livro" placeholder="Buscar livro..." value="${
-          this._search || ""
-        }">
+        <input type="search" id="busca-livro" placeholder="Buscar livro..." value="${this._search || ""}">
       </div>
       <div class="table-responsive">
         <table class="livros-table striped">
@@ -121,6 +107,7 @@ class LivroList extends HTMLElement {
         </table>
       </div>
     `;
+
     // Renderiza apenas o tbody separadamente
     const tbody = this.querySelector("#livros-tbody");
     if (tbody) {
@@ -137,9 +124,9 @@ class LivroList extends HTMLElement {
           .map(
             (livro) => /* html */ `
               <tr>
-                <td>${livro.titulo}</td>
-                <td>${livro.autor}</td>
-                <td>${livro.isbn}</td>
+                <td>${livro.titulo ?? ""}</td>
+                <td>${livro.autor ?? ""}</td>
+                <td>${livro.isbn ?? ""}</td>
                 <td>
                   <div class="list-actions livro-list-actions">
                     <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
@@ -154,141 +141,121 @@ class LivroList extends HTMLElement {
           .join("");
       }
     }
+
     // Eventos
-    this.querySelector("#add-livro-btn").onclick = (e) => {
-      e.preventDefault();
-      if (this._onAdd) this._onAdd();
-    };
-    this.querySelector("#busca-livro").oninput = (e) => {
-      this._search = e.target.value;
-      // Só atualiza o tbody, não o componente inteiro
-      const tbody = this.querySelector("#livros-tbody");
-      if (tbody) {
-        let livros = this.filteredLivros;
-        if (livros.length === 0) {
-          const isBusca = this._search && this._search.trim().length > 0;
-          tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#888;">${
-            isBusca
-              ? "Nenhum livro encontrado para o termo buscado. Tente outro termo."
-              : "Nenhum livro cadastrado. Clique em '+ Adicionar Livro' para inserir o primeiro."
-          }</td></tr>`;
-        } else {
-          tbody.innerHTML = livros
-            .map(
-              (livro) => /* html */ `
-                <tr>
-                  <td>${livro.titulo}</td>
-                  <td>${livro.autor}</td>
-                  <td>${livro.isbn}</td>
-                  <td>
-                    <div class="list-actions livro-list-actions">
-                      <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-                      <button class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
-                      <button class="edit-exemplares-livro-icon outline border-0" data-id="${livro.id}" title="Exemplares por unidade"><i class="fa-solid fa-list-ol"></i></button>
-                      <button class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
-                  </td>
-                </tr>
-              `
-            )
-            .join("");
-        }
-        // Reatribui eventos aos botões do novo tbody
-        this.querySelectorAll(".edit-livro-icon").forEach((btn) => {
-          btn.onclick = (e) => {
-            e.preventDefault();
-            if (this._onEdit) this._onEdit(parseInt(btn.dataset.id));
-          };
-        });
-        this.querySelectorAll(".delete-livro-icon").forEach((btn) => {
-          // ADICIONADO: exclusão via API quando não houver callback externo
-          btn.onclick = async (e) => {
-            e.preventDefault();
-            const id = parseInt(btn.dataset.id);
-            if (window.confirm("Tem certeza que deseja excluir este livro?")) {
-              if (this._onDelete) {
-                this._onDelete(id);
-              } else {
-                try {
-                  await http.delete(`/livros/${id}`);
-                  this._livros = (this._livros || []).filter((l) => l.id !== id);
-                  this.render();
-                } catch (err) {
-                  console.error(err);
-                  const msg = err?.response?.data?.message || err?.message || "Erro ao excluir o livro.";
-                  alert(msg);
-                }
-              }
-            }
-          };
-        });
-        this.querySelectorAll(".view-livro-icon").forEach((btn) => {
-          btn.onclick = (e) => {
-            e.preventDefault();
-            if (window.navigate)
-              window.navigate(`/livros/${btn.dataset.id}/detalhe`);
-            else if (this._onView) this._onView(parseInt(btn.dataset.id));
-          };
-        });
-        this.querySelectorAll(".edit-exemplares-livro-icon").forEach((btn) => {
-          btn.onclick = (e) => {
-            e.preventDefault();
-            if (window.navigate)
-              window.navigate(`/livros/${btn.dataset.id}/exemplares`);
-            else if (this._onEditExemplares)
-              this._onEditExemplares(parseInt(btn.dataset.id));
-          };
-        });
-      }
-    };
+    const addBtn = this.querySelector("#add-livro-btn");
+    if (addBtn) {
+      addBtn.onclick = (e) => {
+        e.preventDefault();
+        if (this._onAdd) this._onAdd();
+        else if (window.navigate) window.navigate("/livros/novo");
+      };
+    }
+
+    const busca = this.querySelector("#busca-livro");
+    if (busca) {
+      busca.oninput = (e) => {
+        this._search = e.target.value;
+        this._rerenderTbody();
+      };
+    }
+
     // Eventos iniciais do tbody
+    this._bindRowActions();
+  }
+
+  _rerenderTbody() {
+    const tbody = this.querySelector("#livros-tbody");
+    if (!tbody) return;
+
+    const livros = this.filteredLivros;
+    if (livros.length === 0) {
+      const isBusca = this._search && this._search.trim().length > 0;
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#888;">${
+        isBusca
+          ? "Nenhum livro encontrado para o termo buscado. Tente outro termo."
+          : "Nenhum livro cadastrado. Clique em '+ Adicionar Livro' para inserir o primeiro."
+      }</td></tr>`;
+    } else {
+      tbody.innerHTML = livros
+        .map(
+          (livro) => /* html */ `
+            <tr>
+              <td>${livro.titulo ?? ""}</td>
+              <td>${livro.autor ?? ""}</td>
+              <td>${livro.isbn ?? ""}</td>
+              <td>
+                <div class="list-actions livro-list-actions">
+                  <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+                  <button class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                  <button class="edit-exemplares-livro-icon outline border-0" data-id="${livro.id}" title="Exemplares por unidade"><i class="fa-solid fa-list-ol"></i></button>
+                  <button class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+              </td>
+            </tr>
+          `
+        )
+        .join("");
+    }
+
+    this._bindRowActions();
+  }
+
+  _bindRowActions() {
     this.querySelectorAll(".edit-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
-        if (this._onEdit) this._onEdit(parseInt(btn.dataset.id));
+        const id = parseInt(btn.dataset.id);
+        if (this._onEdit) this._onEdit(id);
+        else if (window.navigate) window.navigate(`/livros/${id}/editar`);
       };
     });
+
     this.querySelectorAll(".delete-livro-icon").forEach((btn) => {
-      // ADICIONADO: exclusão via API quando não houver callback externo
       btn.onclick = async (e) => {
         e.preventDefault();
         const id = parseInt(btn.dataset.id);
-        if (window.confirm("Tem certeza que deseja excluir este livro?")) {
-          if (this._onDelete) {
-            this._onDelete(id);
-          } else {
-            try {
-              await http.delete(`/livros/${id}`);
-              this._livros = (this._livros || []).filter((l) => l.id !== id);
-              this.render();
-            } catch (err) {
-              console.error(err);
-              const msg = err?.response?.data?.message || err?.message || "Erro ao excluir o livro.";
-              alert(msg);
-            }
-          }
+        if (!window.confirm("Tem certeza que deseja excluir este livro?")) return;
+
+        if (this._onDelete) {
+          this._onDelete(id);
+          return;
+        }
+
+        try {
+          // DELETE em /gestor/livros/{id}/
+          await api.delete(`gestor/livros/${id}/`);
+          this._livros = (this._livros || []).filter((l) => l.id !== id);
+          this._rerenderTbody();
+        } catch (err) {
+          console.error(err);
+          const msg =
+            err?.response?.data?.message ||
+            err?.message ||
+            "Erro ao excluir o livro.";
+          alert(msg);
         }
       };
     });
+
     this.querySelectorAll(".view-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
-        if (window.navigate)
-          window.navigate(`/livros/${btn.dataset.id}/detalhe`);
-        else if (this._onView) this._onView(parseInt(btn.dataset.id));
+        const id = parseInt(btn.dataset.id);
+        if (window.navigate) window.navigate(`/livros/${id}/detalhe`);
+        else if (this._onView) this._onView(id);
       };
     });
+
     this.querySelectorAll(".edit-exemplares-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
-        if (window.navigate)
-          window.navigate(`/livros/${btn.dataset.id}/exemplares`);
-        else if (this._onEditExemplares)
-          this._onEditExemplares(parseInt(btn.dataset.id));
+        const id = parseInt(btn.dataset.id);
+        if (window.navigate) window.navigate(`/livros/${id}/exemplares`);
+        else if (this._onEditExemplares) this._onEditExemplares(id);
       };
     });
   }
 }
 
 customElements.define("livro-list", LivroList);
-

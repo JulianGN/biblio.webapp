@@ -1,6 +1,5 @@
 export async function gestorRoutes({ gestorController, gestorView, navigate }) {
   const path = window.location.pathname;
-  // Só processa rotas que começam com /livros ou /unidades
   if (!/^\/(livros|unidades)/.test(path)) {
     return false;
   }
@@ -9,6 +8,8 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
     if (main) main.remove();
     const header = document.getElementById("main-header");
     if (header) header.remove();
+    const publicHeader = document.getElementById("public-header");
+    if (publicHeader) publicHeader.remove();
     const appContent = document.getElementById("app-content");
     if (appContent) appContent.remove();
     document.querySelector("#app").innerHTML = "";
@@ -17,7 +18,6 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
   clearHeader();
   window.scrollTo(0, 0);
 
-  // Rotas dinâmicas para detalhes (devem vir antes do switch)
   if (/^\/livros\/[0-9]+\/detalhe$/.test(path)) {
     document.body.insertAdjacentHTML(
       "afterbegin",
@@ -37,7 +37,6 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
     return true;
   }
 
-  // Rotas dinâmicas para edição
   if (/^\/livros\/[0-9]+$/.test(path)) {
     document.body.insertAdjacentHTML(
       "afterbegin",
@@ -57,7 +56,6 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
     return true;
   }
 
-  // Rota para edição de exemplares por unidade
   if (/^\/livros\/[0-9]+\/exemplares$/.test(path)) {
     document.body.insertAdjacentHTML(
       "afterbegin",
@@ -70,7 +68,6 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
     return true;
   }
 
-  // Rotas principais
   switch (path) {
     case "/livros":
       document.body.insertAdjacentHTML(

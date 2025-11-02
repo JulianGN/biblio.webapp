@@ -11,52 +11,74 @@ class LivroForm extends HTMLElement {
     this._livroSelecionado = null;
     this._unidadesDisponiveis = null;
     this._tipoObrasDisponiveis = null;
+
+    // guardam a rota que funcionou para reusar no PUT/POST
+    this._endpointDetail = null; // ex.: "/gestor/livros/1/" ou "/livros/1/detalhe"
+    this._endpointBase   = null; // ex.: "/gestor/livros/"
   }
 
-  /* ===== Setters opcionais (permitem injeção externa, se houver) ===== */
+  /* ===== Setters opcionais (injeção externa, se houver) ===== */
   set livroSelecionado(v) { this._livroSelecionado = v || null; }
   set unidadesDisponiveis(v) { this._unidadesDisponiveis = Array.isArray(v) ? v : []; }
   set tipoObrasDisponiveis(v) { this._tipoObrasDisponiveis = Array.isArray(v) ? v : []; }
 
   /* ===== Helpers de URL / carregamento ===== */
   _getLivroIdDaURL() {
+    // 1) ?editar=ID
     const qs = new URLSearchParams(location.search);
     const byQuery = qs.get("editar");
     if (byQuery) return Number(byQuery);
 
-    const m = location.pathname.match(/\/livros\/(\d+)/);
+    // 2) /livros/:id, /livros/:id/editar, /livros/:id/detalhe
+    const m = location.pathname.match(/\/livros\/(\d+)(?:\/(?:editar|detalhe))?\/?$/);
     if (m?.[1]) return Number(m[1]);
 
+    // 3) atributo no elemento
     const byAttr = this.getAttribute("livro-id");
     return byAttr ? Number(byAttr) : null;
   }
 
-   async _carregarLivroSelecionado() {
-    if (this._livroSelecionado) return this._livroSelecionado;
-    const id = this._getLivroIdDaURL();
-    if (!id) return null;
-
-    // Tenta as rotas mais prováveis do DRF/Router
-    const candidates = [
+  _candidatesFor(id) {
+    // cobrimos: com/sem gestor, com/sem barra final, e com /detalhe
+    // (detalhe pode responder um objeto igual ao detail comum)
+    return [
+      `/gestor/livros/${id}/detalhe/`,
+      `/gestor/livros/${id}/detalhe`,
+      `/livros/${id}/detalhe/`,
+      `/livros/${id}/detalhe`,
       `/gestor/livros/${id}/`,
       `/gestor/livros/${id}`,
       `/livros/${id}/`,
       `/livros/${id}`,
     ];
+  }
 
-    for (const url of candidates) {
+  _inferBaseFrom(url) {
+    // tira o sufixo "/:id[/detalhe][/]" e deixa a base
+    // ex.: "/gestor/livros/1/detalhe" -> "/gestor/livros/"
+    const semId = url.replace(/\/\d+(?:\/detalhe)?\/?$/, "/");
+    return semId.endsWith("/") ? semId : (semId + "/");
+  }
+
+  async _carregarLivroSelecionado() {
+    if (this._livroSelecionado) return this._livroSelecionado;
+    const id = this._getLivroIdDaURL();
+    if (!id) return null;
+
+    for (const url of this._candidatesFor(id)) {
       try {
         const data = await api.get(url);
-        if (data && (data.id || data.livro_id)) {
-          // guarda a rota que funcionou para reusar no PUT
-          this._endpointDetail = url;           // exato, com ou sem barra
-          this._endpointBase   = url.replace(/\/\d+\/?$/, "/"); // base para fallback, se precisar
-          this._livroSelecionado = data;
-          console.debug("[livro-form] detalhe OK em:", url);
+        // Aceita formatos comuns: {id:1,...} ou {livro:{...}}
+        const livro = data?.id ? data : (data?.livro || null);
+        if (livro && (livro.id || livro.livro_id || Number(id))) {
+          this._endpointDetail = url;
+          this._endpointBase = this._inferBaseFrom(url);
+          // se veio envolto, desencaixa
+          this._livroSelecionado = livro;
+          console.debug("[livro-form] detalhe OK em:", url, "base:", this._endpointBase);
           return this._livroSelecionado;
         }
       } catch (e) {
-        // silencioso, segue para o próximo
         console.debug("[livro-form] falhou:", url, e?.response?.status || e?.message);
       }
     }
@@ -91,36 +113,21 @@ class LivroForm extends HTMLElement {
     const mapQualquerUnidadesParaState = (arr = []) =>
       (Array.isArray(arr) ? arr : [])
         .map((u) => {
-          const rawId = normalizeId(u?.unidade ?? u?.unidade_id);
+          const rawId = normalizeId(u?.unidade ?? u?.unidade_id ?? u?.id_unidade);
           const unidade = findUnidadeObj(rawId);
-          const exemplares = Number(u?.exemplares ?? u?.qtd ?? u?.quantidade ?? 0) || 0;
+          const exemplares = Number(u?.exemplares ?? u?.qtd ?? u?.quantidade ?? u?.qtd_exemplares ?? 0) || 0;
           if (!unidade) return null;
           return { unidade, exemplares };
         })
         .filter(Boolean);
 
     /* ---------------- Estado inicial de unidades ---------------- */
-    // 1) Se o controller/parent injetou unidades pré-selecionadas, prioriza
     if (Array.isArray(this._unidadesSelecionadas) && this._unidadesSelecionadas.length) {
-      // Aceita [{unidade:obj/id, exemplares}]
       this._livroUnidades = (this._unidadesSelecionadas || []).map((u) => {
         const id = normalizeId(u?.unidade);
         const unidade = typeof u?.unidade === "object" ? u.unidade : findUnidadeObj(id);
         return { unidade, exemplares: Number(u?.exemplares) || 0 };
       }).filter((u) => u?.unidade?.id != null);
-    }
-
-    // 2) Se está em edição e ainda não possuímos estado, hidrata do livro selecionado (se já existir)
-    if (
-      isEdit &&
-      (!Array.isArray(this._livroUnidades) || this._livroUnidades.length === 0) &&
-      this._livroSelecionado
-    ) {
-      const raw = Array.isArray(this._livroSelecionado?.unidades_detalhe) && this._livroSelecionado.unidades_detalhe.length
-        ? this._livroSelecionado.unidades_detalhe
-        : (this._livroSelecionado?.unidades || []);
-      const pre = mapQualquerUnidadesParaState(raw);
-      if (pre.length) this._livroUnidades = pre;
     }
 
     /* ---------------- Template ---------------- */
@@ -173,7 +180,6 @@ class LivroForm extends HTMLElement {
           <input type="text" id="idioma" name="idioma">
         </div>
 
-        <!-- Mantendo input numérico para gênero (compat) -->
         <div>
           <label for="genero">Gênero (ID):</label>
           <input type="number" id="genero" name="genero" min="0">
@@ -182,8 +188,8 @@ class LivroForm extends HTMLElement {
         <div>
           <label for="tipo_obra">Tipo de Obra:</label>
           <select id="tipo_obra" name="tipo_obra">
-            <option value="">Selecione o tipo de obra</option>
-            ${tipoObras.map((t) => `<option value="${t.id}">${t.nome}</option>`).join("")}
+            <option value="">Selecione a opção</option>
+            ${(tipoObras || []).map((t) => `<option value="${t.id}">${t.nome}</option>`).join("")}
           </select>
         </div>
 
@@ -192,7 +198,7 @@ class LivroForm extends HTMLElement {
             <label for="unidade-select">Unidade:</label>
             <select id="unidade-select">
               <option value="">Selecione a unidade</option>
-              ${unidadesDisponiveis.map((u) => `<option value="${u.id}">${u.nome}</option>`).join("")}
+              ${(unidadesDisponiveis || []).map((u) => `<option value="${u.id}">${u.nome}</option>`).join("")}
             </select>
           </div>
 
@@ -258,11 +264,10 @@ class LivroForm extends HTMLElement {
     addUnidadeBtn.onclick = (e) => {
       e.preventDefault();
       const unidadeId = Number(unidadeSelect.value);
-      const unidade = findUnidadeObj(unidadeId);
+      const unidade = (isNaN(unidadeId) ? null : findUnidadeObj(unidadeId));
       const exemplares = Math.max(1, Number(exemplaresInput.value) || 1);
       if (!unidadeId || !unidade) return;
 
-      // Evita duplicatas
       if (this._livroUnidades.some((u) => Number(u.unidade.id) === unidadeId)) return;
 
       this._livroUnidades.push({ unidade, exemplares });
@@ -272,7 +277,6 @@ class LivroForm extends HTMLElement {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
 
-      // validação simples: data do futuro só se tiver ISBN (mesma regra que você já usava)
       const dataPub = form.data_publicacao?.value;
       const isbn = form.isbn?.value;
       let dataInvalida = false;
@@ -286,7 +290,6 @@ class LivroForm extends HTMLElement {
         return false;
       }
 
-      // monta unidades para o backend
       const unidadesPayload = (this._livroUnidades || []).map((u) => ({
         unidade: Number(u.unidade.id),
         exemplares: Number(u.exemplares) || 1,
@@ -301,7 +304,6 @@ class LivroForm extends HTMLElement {
         data_publicacao: form.data_publicacao?.value || null,
         isbn:    form.isbn?.value?.trim()    || "",
         paginas: form.paginas?.value ? Number(form.paginas.value) : null,
-        // envia null quando vazio (não a string "null")
         capa:    (form.capa?.value?.trim() || "") || null,
         idioma:  form.idioma?.value?.trim() || "",
         genero:  form.genero?.value ? Number(form.genero.value) : null,
@@ -316,26 +318,28 @@ class LivroForm extends HTMLElement {
       const livroId = this._livroSelecionado?.id || this._livroSelecionado?.livro_id;
 
       (async () => {
-                try {
+        try {
           if (isEdit && livroId) {
-            // usa exatamente o endpoint que funcionou no GET
-            const endpoint = this._endpointDetail
-              || `/gestor/livros/${livroId}/`; // fallback
+            // Usa a MESMA rota que funcionou no GET (pode ser /detalhe -> trocamos para base/id/)
+            let endpoint = this._endpointDetail;
+            if (endpoint?.includes("/detalhe")) {
+              endpoint = this._endpointBase + String(livroId) + "/"; // ex.: /gestor/livros/1/
+            }
+            if (!endpoint) endpoint = `/gestor/livros/${livroId}/`; // fallback
 
             await api.put(endpoint, payload);
             alert("Livro atualizado com sucesso!");
           } else {
-            // para criar, tente as bases mais comuns
             const bases = [
+              this._endpointBase,
               "/gestor/livros/",
               "/livros/",
-              (this._endpointBase || "/gestor/livros/"),
-            ];
+            ].filter(Boolean);
 
             let ok = false, lastErr = null;
             for (const base of bases) {
               try {
-                await api.post(base, payload);
+                await api.post(base.endsWith("/") ? base : base + "/", payload);
                 ok = true;
                 break;
               } catch (e) {
@@ -385,15 +389,13 @@ class LivroForm extends HTMLElement {
       this._renderUnidadesList();
     };
 
-    if (isEdit) {
-      if (this._livroSelecionado) {
-        // já veio injetado
-        hidratarDoLivro(this._livroSelecionado);
-      } else {
-        // busca do backend se não veio injetado
-        this._carregarLivroSelecionado().then((livro) => hidratarDoLivro(livro));
+    (async () => {
+      if (this.hasAttribute("edit")) {
+        const livro = this._livroSelecionado || await this._carregarLivroSelecionado();
+        console.log("[editar-livro] carregado:", livro, "endpoint:", this._endpointDetail);
+        hidratarDoLivro(livro);
       }
-    }
+    })();
   }
 }
 

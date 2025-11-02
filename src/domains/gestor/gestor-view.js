@@ -16,96 +16,93 @@ export class GestorView {
     console.log("Lista de Gestores:", gestores);
   }
 
-  renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares) {
-    const container =
-      document.getElementById("livros-list") ||
-      document.querySelector("#app-content");
-    if (!container) return;
+ renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares) {
+  const container =
+    document.getElementById("livros-list") ||
+    document.querySelector("#app-content");
+  if (!container) return;
 
-    container.innerHTML = /* html */ `<livro-list></livro-list>`;
-    const livroList = container.querySelector("livro-list");
-    if (!livroList) return;
+  container.innerHTML = /* html */ `<livro-list></livro-list>`;
+  const el = container.querySelector("livro-list");
+  if (!el) return;
 
-    // ==== Normaliza handlers ====
-    const _onAdd = isFn(onAdd) ? onAdd : noop;
-    const _onEdit = isFn(onEdit) ? onEdit : noop;
-    const _onDelete = isFn(onDelete) ? onDelete : noop;
-    const _onView = isFn(onView) ? onView : noop;
-    const _onEditEx = isFn(onEditExemplares) ? onEditExemplares : noop;
+  const isFn = (f) => typeof f === "function";
+  const noop = () => {};
 
-    // ==== DECORA os itens com métodos chamados pelo bundle (d.editLivro etc.) ====
-    const safeLivros = Array.isArray(livros) ? livros : [];
-    const livrosDecorados = safeLivros.map((row) => {
-      // evita redecorar em re-render
-      if (
-        isFn(row.editLivro) &&
-        isFn(row.deleteLivro) &&
-        isFn(row.viewLivro) &&
-        isFn(row.editExemplares)
-      ) {
-        return row;
-      }
-      const id = row?.id;
-      // cria um wrapper que preserva "row" atual
-      return {
-        ...row,
-        editLivro: () => _onEdit(row),                 // d.editLivro()
-        deleteLivro: () => _onDelete(id),              // d.deleteLivro()
-        viewLivro: () => _onView(id),                  // d.viewLivro()
-        editExemplares: () => _onEditEx(id),           // d.editExemplares()
-      };
-    });
+  // Handlers normalizados
+  const _onAdd = isFn(onAdd) ? onAdd : noop;
+  const _onEdit = isFn(onEdit) ? onEdit : noop;
+  const _onDelete = isFn(onDelete) ? onDelete : noop;
+  const _onView = isFn(onView) ? onView : noop;
+  const _onEditEx = isFn(onEditExemplares) ? onEditExemplares : noop;
 
-    // passa os itens decorados para o webcomponent
-    livroList.livros = livrosDecorados;
-
-    // ==== Ponte de compatibilidade também no elemento ====
-    const bridgePairs = {
-      onAdd: _onAdd,           addLivro: _onAdd,
-      onEdit: _onEdit,         editLivro: _onEdit,
-      onDelete: _onDelete,     deleteLivro: _onDelete,
-      onView: _onView,         viewLivro: _onView,
-      onEditExemplares: _onEditEx, editExemplares: _onEditEx,
-    };
-    Object.entries(bridgePairs).forEach(([k, v]) => (livroList[k] = v));
-
-    // ==== Fallbacks globais (para bundles que chamam window.*) ====
-    try {
-      window.addLivro = _onAdd;
-      window.editLivro = _onEdit;
-      window.deleteLivro = _onDelete;
-      window.viewLivro = _onView;
-      window.editExemplares = _onEditEx;
-    } catch {}
-
-    // ==== Reatribuição pós-connectedCallback (corrida de ciclo de vida) ====
-    queueMicrotask(() => {
-      Object.entries(bridgePairs).forEach(([k, v]) => {
-        if (!isFn(livroList[k])) livroList[k] = v;
-      });
-      // se o componente reprocessou a lista, garanta que os itens mantenham os métodos
-      if (Array.isArray(livroList.livros)) {
-        livroList.livros = livroList.livros.map((row) => ({
-          ...row,
-          editLivro: isFn(row.editLivro) ? row.editLivro : () => _onEdit(row),
-          deleteLivro: isFn(row.deleteLivro) ? row.deleteLivro : () => _onDelete(row?.id),
-          viewLivro: isFn(row.viewLivro) ? row.viewLivro : () => _onView(row?.id),
-          editExemplares: isFn(row.editExemplares)
-            ? row.editExemplares
-            : () => _onEditEx(row?.id),
-        }));
+  // 1) Proxy por item — garante d.editLivro mesmo que o componente espalhe/cloque
+  const decorate = (row) => {
+    if (!row || typeof row !== "object") return row;
+    return new Proxy(row, {
+      get(target, prop, receiver) {
+        if (prop === "editLivro") return () => _onEdit(target);
+        if (prop === "deleteLivro") return () => _onDelete(target?.id);
+        if (prop === "viewLivro") return () => _onView(target?.id);
+        if (prop === "editExemplares") return () => _onEditEx(target?.id);
+        return Reflect.get(target, prop, receiver);
+      },
+      // mantém propriedades enumeráveis (spread vê os valores)
+      ownKeys(target) {
+        const keys = Reflect.ownKeys(target);
+        return [...new Set([...keys, "editLivro", "deleteLivro", "viewLivro", "editExemplares"])];
+      },
+      getOwnPropertyDescriptor(target, prop) {
+        if (["editLivro", "deleteLivro", "viewLivro", "editExemplares"].includes(prop)) {
+          return { configurable: true, enumerable: true, writable: false, value: this.get?.(target, prop) };
+        }
+        return Reflect.getOwnPropertyDescriptor(target, prop);
       }
     });
+  };
 
-    // ==== CustomEvents (se o webcomponent emite) ====
-    livroList.addEventListener("livro:criar", () => _onAdd?.());
-    livroList.addEventListener("livro:editar", (e) => _onEdit?.(e.detail));
-    livroList.addEventListener("livro:excluir", (e) => _onDelete?.(e.detail?.id ?? e.detail));
-    livroList.addEventListener("livro:ver", (e) => _onView?.(e.detail?.id ?? e.detail));
-    livroList.addEventListener("livro:exemplares", (e) =>
-      _onEditEx?.(e.detail?.id ?? e.detail)
-    );
-  }
+  const safeLivros = Array.isArray(livros) ? livros : [];
+  const proxied = safeLivros.map(decorate);
+
+  // passa a lista proxificada
+  el.livros = proxied;
+
+  // 2) Ponte de compatibilidade também no elemento
+  el.onAdd = _onAdd;        el.addLivro = _onAdd;
+  el.onEdit = _onEdit;      el.editLivro = _onEdit;
+  el.onDelete = _onDelete;  el.deleteLivro = _onDelete;
+  el.onView = _onView;      el.viewLivro = _onView;
+  el.onEditExemplares = _onEditEx; el.editExemplares = _onEditEx;
+
+  // 3) Fallbacks globais (se o bundle usa window.*)
+  window.addLivro = _onAdd;
+  window.editLivro = _onEdit;
+  window.deleteLivro = _onDelete;
+  window.viewLivro = _onView;
+  window.editExemplares = _onEditEx;
+
+  // 4) Delegação de eventos no host (cobre o caso do componente não usar d.editLivro)
+  el.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+    const id = Number(btn.dataset.id);
+    const action = btn.dataset.action;
+    if (action === "edit") return _onEdit(proxied.find(r => r.id === id));
+    if (action === "delete") return _onDelete(id);
+    if (action === "view") return _onView(id);
+    if (action === "exemplares") return _onEditEx(id);
+  });
+
+  // 5) Também escuta CustomEvents, se existirem
+  el.addEventListener("livro:criar", () => _onAdd?.());
+  el.addEventListener("livro:editar", (e) => _onEdit?.(e.detail));
+  el.addEventListener("livro:excluir", (e) => _onDelete?.(e.detail?.id ?? e.detail));
+  el.addEventListener("livro:ver", (e) => _onView?.(e.detail?.id ?? e.detail));
+  el.addEventListener("livro:exemplares", (e) => _onEditEx?.(e.detail?.id ?? e.detail));
+
+  // 6) Log rápido para depuração: veja como o bundle está lendo os itens
+  console.debug("[livro-list] itens entregues:", el.livros.slice(0,3));
+}
 
   renderLivroForm(
     onSubmit,

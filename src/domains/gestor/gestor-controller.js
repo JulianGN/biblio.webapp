@@ -37,25 +37,40 @@ function mapLivroWithRefs(livro, initData) {
   const generoId = normalizeId(livro?.genero);
   const tipoObraId = normalizeId(livro?.tipo_obra);
 
-  // Unidades (podem vir [{unidade:1, exemplares:2}] ou [{unidade:{id:1,...}, exemplares:2}])
-  const unidadesMapeadas = (Array.isArray(livro?.unidades) ? livro.unidades : []).map((u) => {
-    const unidId = normalizeId(u?.unidade);
+  // Aceita tanto `unidades_detalhe` quanto `unidades`
+  const rawUnidades =
+    (Array.isArray(livro?.unidades_detalhe) && livro.unidades_detalhe.length
+      ? livro.unidades_detalhe
+      : Array.isArray(livro?.unidades)
+      ? livro.unidades
+      : []) || [];
+
+  const unidadesMapeadas = rawUnidades.map((u) => {
+    // aceita {unidade: id|obj} ou {unidade_id: id}
+    const unidId = normalizeId(u?.unidade ?? u?.unidade_id);
     const unidadeObj =
       unidades.find((uni) => Number(uni.id) === Number(unidId)) ||
-      { id: unidId, nome: `Unidade ${unidId}` };
+      (unidId != null
+        ? { id: unidId, nome: `Unidade ${unidId}` }
+        : { id: null, nome: "—" });
 
-    return {
-      unidade: unidadeObj,
-      exemplares: Number(u?.exemplares || 0),
-    };
+    // aceita `exemplares`, `qtd`, `quantidade`
+    const exemplares =
+      Number(u?.exemplares ?? u?.qtd ?? u?.quantidade ?? 0) || 0;
+
+    return { unidade: unidadeObj, exemplares };
   });
 
   return {
     ...livro,
+    // Padroniza: sempre expõe em .unidades (e mantém _detalhe para quem usa)
     unidades: unidadesMapeadas,
+    unidades_detalhe: unidadesMapeadas,
+
     generoObj:
       generos.find((g) => Number(g.id) === Number(generoId)) ||
       (generoId ? { id: generoId, nome: `Gênero ${generoId}` } : null),
+
     tipo_obraObj:
       tipo_obras.find((t) => Number(t.id) === Number(tipoObraId)) ||
       (tipoObraId ? { id: tipoObraId, nome: `Tipo ${tipoObraId}` } : null),
@@ -68,6 +83,9 @@ export class GestorController {
     this.initService = new GestorInitService();
     this.initData = { generos: [], unidades: [], tipo_obras: [] };
     this.view = null;
+
+    // Disponibiliza para componentes/Views que leem do window
+    window.gestorController = this;
 
     // caches leves
     this._livrosCache = null;
@@ -113,19 +131,35 @@ export class GestorController {
     this.view = this.view || new GestorView();
 
     // Garante initData para montar colunas ricas
-    if (!this.initData.generos.length || !this.initData.unidades.length || !this.initData.tipo_obras.length) {
+    if (
+      !this.initData.generos.length ||
+      !this.initData.unidades.length ||
+      !this.initData.tipo_obras.length
+    ) {
       await this.fetchInitData();
     }
 
-    let livros = await this.service.listarLivros();
-    livros = (Array.isArray(livros) ? livros : []).map((livro) => mapLivroWithRefs(livro, this.initData));
+    let livros = [];
+    try {
+      livros = await this.service.listarLivros();
+    } catch (e) {
+      console.error("Falha ao listar livros:", e);
+      alert("Não foi possível carregar a lista de livros agora.");
+    }
+    livros = (Array.isArray(livros) ? livros : []).map((livro) =>
+      mapLivroWithRefs(livro, this.initData)
+    );
 
     this._livrosCache = livros;
     this._lastCallbacks = callbacks;
 
     // Callbacks padrão — resolvem botões criar/editar quando não vier do roteador
-    const onAdd = callbacks.onAdd || (() => this.showLivroForm(null, () => this.showLivrosPage(callbacks)));
-    const onEdit = callbacks.onEdit || ((livro) => this.showLivroForm(livro, () => this.showLivrosPage(callbacks)));
+    const onAdd =
+      callbacks.onAdd ||
+      (() => this.showLivroForm(null, () => this.showLivrosPage(callbacks)));
+    const onEdit =
+      callbacks.onEdit ||
+      ((livro) => this.showLivroForm(livro, () => this.showLivrosPage(callbacks)));
     const onDelete =
       callbacks.onDelete ||
       (async (livroId) => {
@@ -139,7 +173,14 @@ export class GestorController {
       callbacks.onEditExemplares ||
       ((livroId) => this.showLivroExemplaresForm(livroId, () => this.showLivrosPage(callbacks)));
 
-    this.view.renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares);
+    this.view.renderLivrosPage(
+      livros,
+      onAdd,
+      onEdit,
+      onDelete,
+      onView,
+      onEditExemplares
+    );
   }
 
   /* ───────────────────────────────
@@ -148,7 +189,11 @@ export class GestorController {
   async showLivroForm(livro = null, onBack = null) {
     this.view = this.view || new GestorView();
 
-    if (!this.initData.generos.length || !this.initData.unidades.length || !this.initData.tipo_obras.length) {
+    if (
+      !this.initData.generos.length ||
+      !this.initData.unidades.length ||
+      !this.initData.tipo_obras.length
+    ) {
       await this.fetchInitData();
     }
 
@@ -162,7 +207,8 @@ export class GestorController {
       async (form) => {
         // base pode conter id quando em edição
         const livroBase = form._livroSelecionado || {};
-        const getValue = (name) => form.querySelector(`[name="${name}"]`)?.value?.trim() || "";
+        const getValue = (name) =>
+          form.querySelector(`[name="${name}"]`)?.value?.trim() || "";
         const getNumber = (name) => {
           const v = getValue(name);
           return v === "" ? null : Number.parseInt(v, 10);
@@ -172,13 +218,15 @@ export class GestorController {
           titulo: getValue("titulo") || livroBase.titulo || "",
           autor: getValue("autor") || livroBase.autor || "",
           editora: getValue("editora") || livroBase.editora || "",
-          data_publicacao: getValue("data_publicacao") || livroBase.data_publicacao || "",
+          data_publicacao:
+            getValue("data_publicacao") || livroBase.data_publicacao || "",
           isbn: getValue("isbn") || livroBase.isbn || "",
           paginas: getNumber("paginas") ?? livroBase.paginas ?? 0,
           capa: getValue("capa") || livroBase.capa || "",
           idioma: getValue("idioma") || livroBase.idioma || "",
           genero: getNumber("genero") ?? normalizeId(livroBase.genero) ?? 0,
-          tipo_obra: getNumber("tipo_obra") ?? normalizeId(livroBase.tipo_obra) ?? 0,
+          tipo_obra:
+            getNumber("tipo_obra") ?? normalizeId(livroBase.tipo_obra) ?? 0,
         };
 
         // validações simples
@@ -196,7 +244,9 @@ export class GestorController {
               }))
             : [
                 {
-                  unidade: this.initData.unidades[0]?.id ? Number(this.initData.unidades[0].id) : 1,
+                  unidade: this.initData.unidades[0]?.id
+                    ? Number(this.initData.unidades[0].id)
+                    : 1,
                   exemplares: 1,
                 },
               ];
@@ -240,12 +290,23 @@ export class GestorController {
       if (!this.initData.unidades.length) await this.fetchInitData();
 
       const unidadesDisponiveis = this.initData.unidades;
-      const unidadesSelecionadas = (Array.isArray(livro?.unidades) ? livro.unidades : []).map((u) => {
-        const unidId = normalizeId(u.unidade);
+
+      // ✅ usa tanto unidades_detalhe quanto unidades
+      const rawUnidades =
+        (Array.isArray(livro?.unidades_detalhe) && livro.unidades_detalhe.length
+          ? livro.unidades_detalhe
+          : Array.isArray(livro?.unidades)
+          ? livro.unidades
+          : []) || [];
+
+      const unidadesSelecionadas = rawUnidades.map((u) => {
+        const unidId = normalizeId(u?.unidade ?? u?.unidade_id);
         const unidadeObj =
           unidadesDisponiveis.find((uni) => Number(uni.id) === Number(unidId)) ||
           { id: unidId, nome: `Unidade ${unidId}` };
-        return { unidade: unidadeObj, exemplares: Number(u.exemplares || 0) };
+        const exemplares =
+          Number(u?.exemplares ?? u?.qtd ?? u?.quantidade ?? 0) || 0;
+        return { unidade: unidadeObj, exemplares };
       });
 
       el.livroId = Number(id);
@@ -258,10 +319,12 @@ export class GestorController {
       el.onSalvar = async (payload) => {
         try {
           // payload.unidades esperado como [{unidade:{id,...} ou id, exemplares:Number}]
-          const unidades = (Array.isArray(payload?.unidades) ? payload.unidades : []).map((u) => ({
-            unidade: normalizeId(u.unidade),
-            exemplares: Number(u.exemplares || 0),
-          }));
+          const unidades = (Array.isArray(payload?.unidades) ? payload.unidades : []).map(
+            (u) => ({
+              unidade: normalizeId(u.unidade),
+              exemplares: Number(u.exemplares || 0),
+            })
+          );
 
           await this.service.atualizarLivroParcial(Number(id), { unidades });
           alert("Exemplares atualizados com sucesso!");
@@ -289,8 +352,13 @@ export class GestorController {
     this._unidadesCache = unidades;
     this._lastCallbacks = callbacks;
 
-    const onAdd = callbacks.onAdd || (() => this.editUnidade(null, () => this.showUnidadesPage(callbacks)));
-    const onEdit = callbacks.onEdit || ((unidade) => this.editUnidade(unidade?.id, () => this.showUnidadesPage(callbacks)));
+    const onAdd =
+      callbacks.onAdd ||
+      (() => this.editUnidade(null, () => this.showUnidadesPage(callbacks)));
+    const onEdit =
+      callbacks.onEdit ||
+      ((unidade) =>
+        this.editUnidade(unidade?.id, () => this.showUnidadesPage(callbacks)));
     const onDelete =
       callbacks.onDelete ||
       (async (id) => {
@@ -364,7 +432,11 @@ export class GestorController {
   async showLivroDetalhe(id) {
     try {
       const livro = await this.service.getLivroById(id);
-      if (!this.initData.unidades.length || !this.initData.generos.length || !this.initData.tipo_obras.length) {
+      if (
+        !this.initData.unidades.length ||
+        !this.initData.generos.length ||
+        !this.initData.tipo_obras.length
+      ) {
         await this.fetchInitData();
       }
 

@@ -50,13 +50,10 @@ function mapLivroWithRefs(livro, initData) {
     const unidId = normalizeId(u?.unidade ?? u?.unidade_id);
     const unidadeObj =
       unidades.find((uni) => Number(uni.id) === Number(unidId)) ||
-      (unidId != null
-        ? { id: unidId, nome: `Unidade ${unidId}` }
-        : { id: null, nome: "—" });
+      (unidId != null ? { id: unidId, nome: `Unidade ${unidId}` } : { id: null, nome: "—" });
 
     // aceita `exemplares`, `qtd`, `quantidade`
-    const exemplares =
-      Number(u?.exemplares ?? u?.qtd ?? u?.quantidade ?? 0) || 0;
+    const exemplares = Number(u?.exemplares ?? u?.qtd ?? u?.quantidade ?? 0) || 0;
 
     return { unidade: unidadeObj, exemplares };
   });
@@ -157,9 +154,23 @@ export class GestorController {
     const onAdd =
       callbacks.onAdd ||
       (() => this.showLivroForm(null, () => this.showLivrosPage(callbacks)));
+
+    // ✅ aceita id ou objeto; busca na API se vier um id
     const onEdit =
       callbacks.onEdit ||
-      ((livro) => this.showLivroForm(livro, () => this.showLivrosPage(callbacks)));
+      (async (idOrObj) => {
+        try {
+          const id = typeof idOrObj === "object" ? Number(idOrObj?.id) : Number(idOrObj);
+          if (!id) return alert("ID do livro inválido.");
+          const livroApi = await this.service.getLivroById(id);
+          const livroPronto = mapLivroWithRefs(livroApi, this.initData);
+          await this.showLivroForm(livroPronto, () => this.showLivrosPage(callbacks));
+        } catch (err) {
+          console.error("Falha ao abrir edição do livro:", err);
+          alert("Não foi possível abrir o formulário de edição.");
+        }
+      });
+
     const onDelete =
       callbacks.onDelete ||
       (async (livroId) => {
@@ -168,10 +179,13 @@ export class GestorController {
           await this.showLivrosPage(callbacks);
         }
       });
+
     const onView = callbacks.onView || ((livroId) => this.showLivroDetalhe(livroId));
+
     const onEditExemplares =
       callbacks.onEditExemplares ||
-      ((livroId) => this.showLivroExemplaresForm(livroId, () => this.showLivrosPage(callbacks)));
+      ((livroId) =>
+        this.showLivroExemplaresForm(livroId, () => this.showLivrosPage(callbacks)));
 
     this.view.renderLivrosPage(
       livros,
@@ -186,7 +200,7 @@ export class GestorController {
   /* ───────────────────────────────
    * LIVROS — FORMULÁRIO PRINCIPAL
    * ─────────────────────────────── */
-  async showLivroForm(livro = null, onBack = null) {
+  async showLivroForm(idOrLivro = null, onBack = null) {
     this.view = this.view || new GestorView();
 
     if (
@@ -195,6 +209,22 @@ export class GestorController {
       !this.initData.tipo_obras.length
     ) {
       await this.fetchInitData();
+    }
+
+    // ✅ aceita id ou objeto; busca se necessário
+    let livro = null;
+    try {
+      if (idOrLivro && typeof idOrLivro === "object") {
+        livro = { ...idOrLivro };
+      } else if (idOrLivro != null) {
+        const id = Number(idOrLivro);
+        if (Number.isFinite(id) && id > 0) {
+          const fromApi = await this.service.getLivroById(id);
+          livro = fromApi || null;
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao obter livro para edição:", e);
     }
 
     // Ajuste de formato das unidades do livro quando editando

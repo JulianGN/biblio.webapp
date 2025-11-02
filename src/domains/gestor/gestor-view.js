@@ -16,93 +16,93 @@ export class GestorView {
     console.log("Lista de Gestores:", gestores);
   }
 
- renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares) {
-  const container =
-    document.getElementById("livros-list") ||
-    document.querySelector("#app-content");
-  if (!container) return;
+  renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares) {
+    const container =
+      document.getElementById("livros-list") ||
+      document.querySelector("#app-content");
+    if (!container) return;
 
-  container.innerHTML = /* html */ `<livro-list></livro-list>`;
-  const el = container.querySelector("livro-list");
-  if (!el) return;
+    container.innerHTML = /* html */ `<livro-list></livro-list>`;
+    const el = container.querySelector("livro-list");
+    if (!el) return;
 
-  const isFn = (f) => typeof f === "function";
-  const noop = () => {};
+    const isFn = (f) => typeof f === "function";
+    const noop = () => {};
 
-  // Handlers normalizados
-  const _onAdd = isFn(onAdd) ? onAdd : noop;
-  const _onEdit = isFn(onEdit) ? onEdit : noop;
-  const _onDelete = isFn(onDelete) ? onDelete : noop;
-  const _onView = isFn(onView) ? onView : noop;
-  const _onEditEx = isFn(onEditExemplares) ? onEditExemplares : noop;
+    // Handlers normalizados
+    const _onAdd = isFn(onAdd) ? onAdd : noop;
+    const _onEdit = isFn(onEdit) ? onEdit : noop;
+    const _onDelete = isFn(onDelete) ? onDelete : noop;
+    const _onView = isFn(onView) ? onView : noop;
+    const _onEditEx = isFn(onEditExemplares) ? onEditExemplares : noop;
 
-  // 1) Proxy por item — garante d.editLivro mesmo que o componente espalhe/cloque
-  const decorate = (row) => {
-    if (!row || typeof row !== "object") return row;
-    return new Proxy(row, {
-      get(target, prop, receiver) {
-        if (prop === "editLivro") return () => _onEdit(target);
-        if (prop === "deleteLivro") return () => _onDelete(target?.id);
-        if (prop === "viewLivro") return () => _onView(target?.id);
-        if (prop === "editExemplares") return () => _onEditEx(target?.id);
-        return Reflect.get(target, prop, receiver);
-      },
-      // mantém propriedades enumeráveis (spread vê os valores)
-      ownKeys(target) {
-        const keys = Reflect.ownKeys(target);
-        return [...new Set([...keys, "editLivro", "deleteLivro", "viewLivro", "editExemplares"])];
-      },
-      getOwnPropertyDescriptor(target, prop) {
-        if (["editLivro", "deleteLivro", "viewLivro", "editExemplares"].includes(prop)) {
-          return { configurable: true, enumerable: true, writable: false, value: this.get?.(target, prop) };
+    // 1) Proxy por item — garante d.editLivro mesmo que o componente espalhe/cloque
+    const decorate = (row) => {
+      if (!row || typeof row !== "object") return row;
+      return new Proxy(row, {
+        get(target, prop, receiver) {
+          if (prop === "editLivro") return () => _onEdit(target);
+          if (prop === "deleteLivro") return () => _onDelete(target?.id);
+          if (prop === "viewLivro") return () => _onView(target?.id);
+          if (prop === "editExemplares") return () => _onEditEx(target?.id);
+          return Reflect.get(target, prop, receiver);
+        },
+        // mantém propriedades enumeráveis (spread vê os valores)
+        ownKeys(target) {
+          const keys = Reflect.ownKeys(target);
+          return [...new Set([...keys, "editLivro", "deleteLivro", "viewLivro", "editExemplares"])];
+        },
+        getOwnPropertyDescriptor(target, prop) {
+          if (["editLivro", "deleteLivro", "viewLivro", "editExemplares"].includes(prop)) {
+            return { configurable: true, enumerable: true, writable: false, value: this.get?.(target, prop) };
+          }
+          return Reflect.getOwnPropertyDescriptor(target, prop);
         }
-        return Reflect.getOwnPropertyDescriptor(target, prop);
-      }
+      });
+    };
+
+    const safeLivros = Array.isArray(livros) ? livros : [];
+    const proxied = safeLivros.map(decorate);
+
+    // passa a lista proxificada
+    el.livros = proxied;
+
+    // 2) Ponte de compatibilidade também no elemento
+    el.onAdd = _onAdd;        el.addLivro = _onAdd;
+    el.onEdit = _onEdit;      el.editLivro = _onEdit;
+    el.onDelete = _onDelete;  el.deleteLivro = _onDelete;
+    el.onView = _onView;      el.viewLivro = _onView;
+    el.onEditExemplares = _onEditEx; el.editExemplares = _onEditEx;
+
+    // 3) Fallbacks globais (se o bundle usa window.*)
+    window.addLivro = _onAdd;
+    window.editLivro = _onEdit;
+    window.deleteLivro = _onDelete;
+    window.viewLivro = _onView;
+    window.editExemplares = _onEditEx;
+
+    // 4) Delegação de eventos no host (cobre o caso do componente não usar d.editLivro)
+    el.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      const action = btn.dataset.action;
+      if (action === "edit") return _onEdit(proxied.find(r => r.id === id));
+      if (action === "delete") return _onDelete(id);
+      if (action === "view") return _onView(id);
+      if (action === "exemplares") return _onEditEx(id);
     });
-  };
 
-  const safeLivros = Array.isArray(livros) ? livros : [];
-  const proxied = safeLivros.map(decorate);
+    // 5) Também escuta CustomEvents, se existirem
+    el.addEventListener("livro:criar", () => _onAdd?.());
+    el.addEventListener("livro:editar", (e) => _onEdit?.(e.detail));
+    el.addEventListener("livro:excluir", (e) => _onDelete?.(e.detail?.id ?? e.detail));
+    el.addEventListener("livro:ver", (e) => _onView?.(e.detail?.id ?? e.detail));
+    el.addEventListener("livro:exemplares", (e) => _onEditEx?.(e.detail?.id ?? e.detail));
 
-  // passa a lista proxificada
-  el.livros = proxied;
-
-  // 2) Ponte de compatibilidade também no elemento
-  el.onAdd = _onAdd;        el.addLivro = _onAdd;
-  el.onEdit = _onEdit;      el.editLivro = _onEdit;
-  el.onDelete = _onDelete;  el.deleteLivro = _onDelete;
-  el.onView = _onView;      el.viewLivro = _onView;
-  el.onEditExemplares = _onEditEx; el.editExemplares = _onEditEx;
-
-  // 3) Fallbacks globais (se o bundle usa window.*)
-  window.addLivro = _onAdd;
-  window.editLivro = _onEdit;
-  window.deleteLivro = _onDelete;
-  window.viewLivro = _onView;
-  window.editExemplares = _onEditEx;
-
-  // 4) Delegação de eventos no host (cobre o caso do componente não usar d.editLivro)
-  el.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-action]");
-    if (!btn) return;
-    const id = Number(btn.dataset.id);
-    const action = btn.dataset.action;
-    if (action === "edit") return _onEdit(proxied.find(r => r.id === id));
-    if (action === "delete") return _onDelete(id);
-    if (action === "view") return _onView(id);
-    if (action === "exemplares") return _onEditEx(id);
-  });
-
-  // 5) Também escuta CustomEvents, se existirem
-  el.addEventListener("livro:criar", () => _onAdd?.());
-  el.addEventListener("livro:editar", (e) => _onEdit?.(e.detail));
-  el.addEventListener("livro:excluir", (e) => _onDelete?.(e.detail?.id ?? e.detail));
-  el.addEventListener("livro:ver", (e) => _onView?.(e.detail?.id ?? e.detail));
-  el.addEventListener("livro:exemplares", (e) => _onEditEx?.(e.detail?.id ?? e.detail));
-
-  // 6) Log rápido para depuração: veja como o bundle está lendo os itens
-  console.debug("[livro-list] itens entregues:", el.livros.slice(0,3));
-}
+    // 6) Log rápido para depuração
+    console.debug("[livro-list] itens entregues:", el.livros.slice(0, 3));
+  }
 
   renderLivroForm(
     onSubmit,
@@ -124,20 +124,21 @@ export class GestorView {
     const livroFormEl = document.querySelector("livro-form");
     if (!livroFormEl) return;
 
-    // Disponíveis e selecionadas (para o webcomponent usar)
-    livroFormEl._unidadesDisponiveis = Array.isArray(unidades) ? unidades : [];
+    // ✅ Disponíveis e selecionadas (para o webcomponent usar)
+    livroFormEl._unidadesDisponiveis  = Array.isArray(unidades)   ? unidades   : [];
+    livroFormEl._tipoObrasDisponiveis = Array.isArray(tipo_obras) ? tipo_obras : [];
     if (livro && Array.isArray(livro.unidades)) {
       livroFormEl._unidadesSelecionadas = livro.unidades;
       livroFormEl._livroSelecionado = livro;
+      if (livro.id) livroFormEl.setAttribute("livro-id", String(livro.id));
     }
 
-    // Preenche campos básicos quando em edição
+    // Preenche campos básicos quando em edição (compat)
     if (livro) {
       if (livroFormEl.titulo) livroFormEl.titulo.value = livro.titulo ?? "";
       if (livroFormEl.autor) livroFormEl.autor.value = livro.autor ?? "";
       if (livroFormEl.editora) livroFormEl.editora.value = livro.editora ?? "";
-      if (livroFormEl.data_publicacao)
-        livroFormEl.data_publicacao.value = livro.data_publicacao ?? "";
+      if (livroFormEl.data_publicacao) livroFormEl.data_publicacao.value = livro.data_publicacao ?? "";
       if (livroFormEl.isbn) livroFormEl.isbn.value = livro.isbn ?? "";
       if (livroFormEl.paginas) livroFormEl.paginas.value = livro.paginas ?? "";
       if (livroFormEl.capa) livroFormEl.capa.value = livro.capa ?? "";
@@ -188,38 +189,12 @@ export class GestorView {
         normalizeId(livro.genero) || normalizeId(livro.generoObj) || "";
     }
 
-    /* -----------------------------------
-       Select de Tipo de Obra (robusto)
-    ------------------------------------*/
-    let tipoObraSelect = null;
-    const tipoObraInput = livroFormEl.querySelector(
-      'input[name="tipo_obra"], input#tipo_obra'
-    );
-
-    const tipoObraHtml = `
-      <label for="tipo_obra">Tipo de Obra:</label>
-      <select id="tipo_obra" name="tipo_obra">
-        <option value="">Selecione o tipo de obra</option>
-        ${(tipo_obras || [])
-          .map((t) => `<option value="${t.id}">${t.nome}</option>`)
-          .join("")}
-      </select>
-    `;
-
-    if (tipoObraInput) {
-      const tipoDiv = tipoObraInput.closest("div");
-      if (tipoDiv) {
-        tipoDiv.innerHTML = tipoObraHtml;
-        tipoObraSelect = tipoDiv.querySelector("select#tipo_obra");
-      }
-    } else {
-      const tipoDiv = document.createElement("div");
-      tipoDiv.innerHTML = tipoObraHtml;
-      livroFormEl.appendChild(tipoDiv);
-      tipoObraSelect = tipoDiv.querySelector("select#tipo_obra");
-    }
-
-    if (livro && tipoObraSelect) {
+    /* ---------------------------------------------------------
+       🔧 Tipo de Obra: NÃO recriar o campo (evita duplicado).
+       Apenas seta o valor no select que já existe no <livro-form>.
+    ----------------------------------------------------------*/
+    const tipoObraSelect = livroFormEl.querySelector('select#tipo_obra, select[name="tipo_obra"]');
+    if (tipoObraSelect && livro) {
       tipoObraSelect.value =
         normalizeId(livro.tipo_obra) ||
         normalizeId(livro.tipo_obraObj) ||

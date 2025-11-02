@@ -44,6 +44,7 @@ class LivroList extends HTMLElement {
   connectedCallback() {
     this.render();
 
+    // Se ninguém injetou dados, carrega da API
     if (!this._livros || this._livros.length === 0) {
       (async () => {
         try {
@@ -95,11 +96,14 @@ class LivroList extends HTMLElement {
     if (addBtn) {
       addBtn.onclick = (e) => {
         e.preventDefault();
-        if (this._onAdd) this._onAdd();
-        else if (window.gestorController?.showLivroForm) {
+        e.stopPropagation();
+        if (this._onAdd) {
+          this._onAdd();
+          return;
+        }
+        // Fallback 100% SPA (sem rota)
+        if (window.gestorController?.showLivroForm) {
           window.gestorController.showLivroForm(null, () => window.gestorController.showLivrosPage?.());
-        } else if (window.navigate) {
-          window.navigate("/livros/novo");
         }
       };
     }
@@ -147,30 +151,49 @@ class LivroList extends HTMLElement {
   }
 
   _bindRowActions() {
-    // EDITAR — usa callback; fallback: controller SPA; último caso: navigate
+    // ===== EDITAR =====
     this.querySelectorAll(".edit-livro-icon").forEach((btn) => {
-      btn.onclick = (e) => {
+      btn.onclick = async (e) => {
         e.preventDefault();
-        const id = Number(btn.dataset.id);
-        const livro = (this._livros || []).find((l) => Number(l?.id) === id) || { id };
+        e.stopPropagation();
 
+        const id = Number(btn.dataset.id);
+        // tenta achar o objeto completo na lista atual
+        let livro = (this._livros || []).find((l) => Number(l?.id) === id);
+
+        // preferir callback vindo da View/Controller
         if (this._onEdit) {
-          this._onEdit(livro);
+          this._onEdit(livro || { id }); // View cuida de buscar se precisar
           return;
         }
+
+        // fallback SPA: chamar controller diretamente (sem rota)
         if (window.gestorController?.showLivroForm) {
+          // se não tivermos os dados completos, busca pela API antes de abrir o form
+          if (!livro || !livro.titulo) {
+            try {
+              livro = await api.get(`/gestor/livros/${id}/`);
+            } catch (err) {
+              console.error("Falha ao buscar livro antes de editar:", err);
+              alert("Não foi possível carregar o livro para edição.");
+              return;
+            }
+          }
           window.gestorController.showLivroForm(livro, () => window.gestorController.showLivrosPage?.());
           return;
         }
-        // último recurso
-        if (window.navigate) window.navigate(`/livros/${id}/editar`);
+
+        // SEM NAVEGAÇÃO POR ROTA — nunca chame window.navigate aqui
+        alert("Não foi possível abrir o formulário de edição no momento.");
       };
     });
 
-    // EXCLUIR
+    // ===== EXCLUIR =====
     this.querySelectorAll(".delete-livro-icon").forEach((btn) => {
       btn.onclick = async (e) => {
         e.preventDefault();
+        e.stopPropagation();
+
         const id = Number(btn.dataset.id);
         if (!window.confirm("Tem certeza que deseja excluir este livro?")) return;
 
@@ -191,11 +214,14 @@ class LivroList extends HTMLElement {
       };
     });
 
-    // VISUALIZAR — evita navegar para rota protegida
+    // ===== VISUALIZAR =====
     this.querySelectorAll(".view-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
+        e.stopPropagation();
+
         const id = Number(btn.dataset.id);
+
         if (this._onView) {
           this._onView(id);
           return;
@@ -204,15 +230,18 @@ class LivroList extends HTMLElement {
           window.gestorController.showLivroDetalhe(id);
           return;
         }
-        if (window.navigate) window.navigate(`/livros/${id}/detalhe`);
+        alert("Não foi possível abrir os detalhes agora.");
       };
     });
 
-    // EDITAR EXEMPLARES — idem
+    // ===== EDITAR EXEMPLARES =====
     this.querySelectorAll(".edit-exemplares-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
+        e.stopPropagation();
+
         const id = Number(btn.dataset.id);
+
         if (this._onEditExemplares) {
           this._onEditExemplares(id);
           return;
@@ -221,7 +250,7 @@ class LivroList extends HTMLElement {
           window.gestorController.showLivroExemplaresForm(id, () => window.gestorController.showLivrosPage?.());
           return;
         }
-        if (window.navigate) window.navigate(`/livros/${id}/exemplares`);
+        alert("Não foi possível abrir a edição de exemplares agora.");
       };
     });
   }

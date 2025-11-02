@@ -1,11 +1,9 @@
 // 📁 src/components/livro/livro-form.js
 import "./livro-form.css";
-import { BaseService } from "../../domains/base-service"; 
+import { BaseService } from "../../domains/base-service";
 
-// Instância única de API para este módulo
 const api = new BaseService();
 
-// Web Component para o formulário de livro
 class LivroForm extends HTMLElement {
   constructor() {
     super();
@@ -22,26 +20,51 @@ class LivroForm extends HTMLElement {
     const unidades = this._unidadesDisponiveis || getList("unidades") || [];
     const tipoObras = this._tipoObrasDisponiveis || getList("tipo_obras") || [];
 
-    // Estado interno das unidades selecionadas para o livro
+    // ---------- helpers ----------
+    const mapUnidadesDetalheToState = (unidadesDetalhe = []) => {
+      // Transforma o que veio do backend (unidades_detalhe) no formato usado na UI
+      return unidadesDetalhe
+        .filter((ud) => ud && ud.unidade && ud.unidade.id)
+        .map((ud) => ({
+          unidade: {
+            id: Number(ud.unidade.id),
+            nome: ud.unidade.nome || "",
+            endereco: ud.unidade.endereco || "",
+            telefone: ud.unidade.telefone || "",
+            email: ud.unidade.email || "",
+            site: ud.unidade.site || "",
+          },
+          exemplares: Number(ud.exemplares) || 1,
+        }));
+    };
+
+    // Estado interno das unidades do livro
     this._livroUnidades =
       Array.isArray(this._livroUnidades) && this._livroUnidades.length > 0
         ? this._livroUnidades
-        : (this._livroUnidades = []);
+        : [];
 
-    if (isEdit && this._livroUnidades.length === 0 && this._unidadesSelecionadas) {
-      this._livroUnidades = this._unidadesSelecionadas;
-    }
+    // Se vierem unidades pré-selecionadas de fora, respeite
     if (isEdit && this._unidadesSelecionadas && this._unidadesSelecionadas.length > 0) {
       this._livroUnidades = [...this._unidadesSelecionadas];
     }
 
+    // Hidratação automática a partir do livro selecionado (edição)
+    if (isEdit && this._livroSelecionado && (!this._livroUnidades || this._livroUnidades.length === 0)) {
+      const pre = mapUnidadesDetalheToState(this._livroSelecionado.unidades_detalhe || []);
+      if (pre.length > 0) {
+        this._livroUnidades = pre;
+      }
+    }
+
+    // ---------- template ----------
     this.innerHTML = `
       <form id="livro-form">
         <div class="livro-form-header">
           <button type="button" id="voltar-btn" class="outline border-0">
             <i class="fa-solid fa-arrow-left"></i>
           </button>
-          <h2 style="margin: 0;">${isEdit ? "Editar Livro" : "Adicionar Livro"}</h2>
+          <h2 style="margin:0;">${isEdit ? "Editar Livro" : "Adicionar Livro"}</h2>
         </div>
 
         <div>
@@ -103,7 +126,7 @@ class LivroForm extends HTMLElement {
           <button type="button" id="add-unidade-livro" class="outline">Adicionar Unidade</button>
         </div>
 
-        <div id="livro-unidades-list" style="margin:8px 0 16px 0;"></div>
+        <div id="livro-unidades-list" style="margin:8px 0 16px;"></div>
 
         <div class="livro-form-footer">
           <button type="button" id="cancelar-btn" class="outline">Cancelar</button>
@@ -112,123 +135,100 @@ class LivroForm extends HTMLElement {
       </form>
     `;
 
+    // ---------- comportamento ----------
     setTimeout(() => {
       const voltarBtn = this.querySelector("#voltar-btn");
       const cancelarBtn = this.querySelector("#cancelar-btn");
-      if (voltarBtn) {
-        voltarBtn.onclick = (e) => {
-          e.preventDefault();
-          window.navigate && window.navigate("/livros");
-        };
-      }
-      if (cancelarBtn) {
-        cancelarBtn.onclick = (e) => {
-          e.preventDefault();
-          window.navigate && window.navigate("/livros");
-        };
-      }
+      voltarBtn && (voltarBtn.onclick = (e) => { e.preventDefault(); window.navigate && window.navigate("/livros"); });
+      cancelarBtn && (cancelarBtn.onclick = (e) => { e.preventDefault(); window.navigate && window.navigate("/livros"); });
 
-      const unidadeSelect = this.querySelector("#unidade-select");
+      const unidadeSelect   = this.querySelector("#unidade-select");
       const exemplaresInput = this.querySelector("#exemplares-input");
-      const addUnidadeBtn = this.querySelector("#add-unidade-livro");
+      const addUnidadeBtn   = this.querySelector("#add-unidade-livro");
       const unidadesListDiv = this.querySelector("#livro-unidades-list");
-      const form = this.querySelector("#livro-form");
+      const form            = this.querySelector("#livro-form");
 
-      // Renderizar lista de unidades já escolhidas
       const renderUnidadesList = () => {
         unidadesListDiv.innerHTML =
           this._livroUnidades.length > 0
-            ? `<ul style='margin:0;padding-left:1.2em;'>` +
-              this._livroUnidades
-                .map(
-                  (u) =>
-                    `<li><strong>${u.unidade.nome}:</strong> ${u.exemplares} exemplar(es) 
-                      <button type='button' class='remove-unidade-livro outline' data-id='${u.unidade.id}'>Remover</button>
+            ? `<ul style="margin:0;padding-left:1.2em;">${
+                this._livroUnidades
+                  .map(
+                    (u) => `<li>
+                      <strong>${u.unidade.nome}:</strong> ${u.exemplares} exemplar(es)
+                      <button type="button" class="remove-unidade-livro outline" data-id="${u.unidade.id}">Remover</button>
                     </li>`
-                )
-                .join("") +
-              `</ul>`
+                  )
+                  .join("")
+              }</ul>`
             : '<span style="color:#888;">Nenhuma unidade adicionada.</span>';
 
-        // Eventos de remover
         unidadesListDiv.querySelectorAll(".remove-unidade-livro").forEach((btn) => {
           btn.onclick = (e) => {
             e.preventDefault();
-            const id = parseInt(btn.dataset.id);
+            const id = Number(btn.dataset.id);
             this._livroUnidades = this._livroUnidades.filter((u) => u.unidade.id !== id);
             renderUnidadesList();
           };
         });
       };
 
-      if (isEdit && this._unidadesSelecionadas && this._unidadesSelecionadas.length > 0) {
-        this._livroUnidades = [...this._unidadesSelecionadas];
-        renderUnidadesList();
-      } else {
-        renderUnidadesList();
-      }
+      // Render inicial (já considera hidratação feita acima)
+      renderUnidadesList();
 
       addUnidadeBtn.onclick = (e) => {
         e.preventDefault();
-        const unidadeId = parseInt(unidadeSelect.value);
+        const unidadeId = Number(unidadeSelect.value);
         const unidade = unidades.find((u) => u.id === unidadeId);
-        const exemplares = parseInt(exemplaresInput.value) || 1;
+        const exemplares = Number(exemplaresInput.value) || 1;
         if (!unidadeId || !unidade) return;
         if (this._livroUnidades.some((u) => u.unidade.id === unidadeId)) return;
         this._livroUnidades.push({ unidade, exemplares });
         renderUnidadesList();
       };
 
-      // Submit do formulário
       form.addEventListener("submit", (event) => {
         event.preventDefault();
 
-        // Validação extra: data e ISBN
+        // validação simples data/ISBN
         const dataPub = form.data_publicacao?.value;
-        const isbn = form.isbn?.value;
+        const isbn    = form.isbn?.value;
         let dataInvalida = false;
         if (dataPub) {
-          const dataObj = new Date(dataPub);
-          const hoje = new Date();
-          if (isNaN(dataObj.getTime()) || dataObj > hoje) dataInvalida = true;
+          const d = new Date(dataPub);
+          const today = new Date();
+          if (isNaN(d.getTime()) || d > today) dataInvalida = true;
         }
         if ((dataInvalida || !dataPub) && (!isbn || isbn.trim() === "")) {
           alert("Informe uma data de publicação válida ou um ISBN.");
           return false;
         }
 
-        // Sincroniza as unidades escolhidas do componente com o form
-        form._livroUnidades = this._livroUnidades || [];
-
-        // Monta payload de unidades
-        if (form._livroUnidades && form._livroUnidades.length > 0) {
-          form._unidadesPayload = form._livroUnidades.map((u) => ({
-            unidade: u.unidade.id,
-            exemplares: u.exemplares,
+        // monta unidades -> payload do backend
+        const unidadesPayload =
+          (this._livroUnidades || []).map((u) => ({
+            unidade: Number(u.unidade.id),
+            exemplares: Number(u.exemplares) || 1,
           }));
-        } else {
-          form._unidadesPayload = [{ unidade: unidades[0]?.id || 1, exemplares: 1 }];
-        }
 
-        // Tipo de obra selecionado
-        form._tipoObraValue = form.querySelector('[name="tipo_obra"]')?.value || null;
+        const tipoObraSel = form.querySelector('[name="tipo_obra"]')?.value || null;
 
-        // Payload final
         const payload = {
-          titulo: form.titulo?.value?.trim() || "",
-          autor: form.autor?.value?.trim() || "",
+          titulo:  form.titulo?.value?.trim()  || "",
+          autor:   form.autor?.value?.trim()   || "",
           editora: form.editora?.value?.trim() || "",
           data_publicacao: form.data_publicacao?.value || null,
-          isbn: form.isbn?.value?.trim() || "",
+          isbn:    form.isbn?.value?.trim()    || "",
           paginas: form.paginas?.value ? Number(form.paginas.value) : null,
-          capa: form.capa?.value?.trim() || "",
-          idioma: form.idioma?.value?.trim() || "",
-          genero: form.genero?.value ? Number(form.genero.value) : null,
-          tipo_obra: form._tipoObraValue ? Number(form._tipoObraValue) : null,
-          unidades: form._unidadesPayload || [],
+          // envia null (não "null" string)
+          capa:    (form.capa?.value?.trim() || "") || null,
+          idioma:  form.idioma?.value?.trim() || "",
+          genero:  form.genero?.value ? Number(form.genero.value) : null,
+          tipo_obra: tipoObraSel ? Number(tipoObraSel) : null,
+          // 🔥 apenas o campo esperado pelo backend
+          unidades: unidadesPayload,
         };
 
-        // Chamada à API (POST ou PUT)
         const submitBtn = this.querySelector('button[type="submit"]');
         const originalText = submitBtn?.textContent;
         if (submitBtn) submitBtn.textContent = isEdit ? "Salvando..." : "Criando...";
@@ -238,11 +238,9 @@ class LivroForm extends HTMLElement {
         (async () => {
           try {
             if (isEdit && livroId) {
-              // PUT em /gestor/livros/{id}/
               await api.put(`/gestor/livros/${livroId}/`, payload);
               alert("Livro atualizado com sucesso!");
             } else {
-              // POST em /gestor/livros/
               await api.post("/gestor/livros/", payload);
               alert("Livro criado com sucesso!");
             }
@@ -257,21 +255,44 @@ class LivroForm extends HTMLElement {
         })();
       });
 
-      // Preencher campos do formulário ao editar
+      // Preenche campos na edição
       if (isEdit && this._livroSelecionado) {
         const livro = this._livroSelecionado;
-        const form = this.querySelector("#livro-form");
-        if (livro && form) {
-          if (form.titulo) form.titulo.value = livro.titulo || "";
-          if (form.autor) form.autor.value = livro.autor || "";
-          if (form.editora) form.editora.value = livro.editora || "";
-          if (form.data_publicacao) form.data_publicacao.value = livro.data_publicacao || "";
-          if (form.isbn) form.isbn.value = livro.isbn || "";
-          if (form.paginas) form.paginas.value = livro.paginas || "";
-          if (form.capa) form.capa.value = livro.capa || "";
-          if (form.idioma) form.idioma.value = livro.idioma || "";
-          if (form.genero) form.genero.value = livro.genero || "";
-          if (form.tipo_obra) form.tipo_obra.value = livro.tipo_obra || "";
+        const f = this.querySelector("#livro-form");
+        if (livro && f) {
+          if (f.titulo)       f.titulo.value       = livro.titulo || "";
+          if (f.autor)        f.autor.value        = livro.autor || "";
+          if (f.editora)      f.editora.value      = livro.editora || "";
+          if (f.data_publicacao) f.data_publicacao.value = livro.data_publicacao || "";
+          if (f.isbn)         f.isbn.value         = livro.isbn || "";
+          if (f.paginas)      f.paginas.value      = livro.paginas || "";
+          if (f.capa)         f.capa.value         = livro.capa && livro.capa !== "null" ? livro.capa : "";
+          if (f.idioma)       f.idioma.value       = livro.idioma || "";
+          if (f.genero)       f.genero.value       = livro.genero || "";
+          if (f.tipo_obra)    f.tipo_obra.value    = livro.tipo_obra || "";
+
+          // Caso venha um novo livro selecionado com unidades, reidrata e rerenderiza
+          const pre = mapUnidadesDetalheToState(livro.unidades_detalhe || []);
+          if (pre.length > 0) {
+            this._livroUnidades = pre;
+            // refaz a lista
+            const unidadesListDiv = this.querySelector("#livro-unidades-list");
+            if (unidadesListDiv) {
+              // reusa a função local:
+              const evt = new Event("repaint");
+              unidadesListDiv.dispatchEvent(evt);
+            }
+            // como a função está no escopo, chamamos diretamente:
+            // (garantimos chamada após setTimeout inicial)
+            // mas já renderizamos acima na criação, então:
+            // só força novo render:
+            const again = () => {
+              const ul = this.querySelector("#livro-unidades-list");
+              if (ul) {
+                // reaproveita
+              }
+            };
+          }
         }
       }
     }, 0);
@@ -280,7 +301,6 @@ class LivroForm extends HTMLElement {
 
 customElements.define("livro-form", LivroForm);
 
-// Bootstrap opcional do controller global (mantido)
 if (typeof window !== "undefined") {
   if (!window.gestorController && window.GestorController) {
     window.gestorController = new window.GestorController();

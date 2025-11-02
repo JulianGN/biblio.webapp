@@ -5,7 +5,7 @@
 import { GestorService } from "./gestor-service.js";
 import { GestorView } from "./gestor-view.js";
 import { GestorInitService } from "./gestor-init-service.js";
-import "../components/livro/livro-exemplares.js";
+import "../../components/livro/livro-exemplares.js";
 
 // Função de navegação SPA (espera-se que esteja global ou na main.js)
 const navigate =

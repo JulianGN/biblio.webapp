@@ -9,7 +9,6 @@ class LivroList extends HTMLElement {
     super();
     this._search = "";
     this._livros = [];
-    // callbacks
     this._onEdit = null;
     this._onDelete = null;
     this._onView = null;
@@ -25,11 +24,11 @@ class LivroList extends HTMLElement {
     return this._livros || [];
   }
 
-  set onEdit(cb)            { this._onEdit = typeof cb === "function" ? cb : null; this.render(); }
-  set onDelete(cb)          { this._onDelete = typeof cb === "function" ? cb : null; this.render(); }
-  set onView(cb)            { this._onView = typeof cb === "function" ? cb : null; this.render(); }
-  set onAdd(cb)             { this._onAdd = typeof cb === "function" ? cb : null; this.render(); }
-  set onEditExemplares(cb)  { this._onEditExemplares = typeof cb === "function" ? cb : null; this.render(); }
+  set onEdit(cb)           { this._onEdit = typeof cb === "function" ? cb : null; this.render(); }
+  set onDelete(cb)         { this._onDelete = typeof cb === "function" ? cb : null; this.render(); }
+  set onView(cb)           { this._onView = typeof cb === "function" ? cb : null; this.render(); }
+  set onAdd(cb)            { this._onAdd = typeof cb === "function" ? cb : null; this.render(); }
+  set onEditExemplares(cb) { this._onEditExemplares = typeof cb === "function" ? cb : null; this.render(); }
 
   get filteredLivros() {
     if (!this._search) return this.livros;
@@ -45,7 +44,6 @@ class LivroList extends HTMLElement {
   connectedCallback() {
     this.render();
 
-    // Carrega da API se não veio via setter
     if (!this._livros || this._livros.length === 0) {
       (async () => {
         try {
@@ -98,7 +96,11 @@ class LivroList extends HTMLElement {
       addBtn.onclick = (e) => {
         e.preventDefault();
         if (this._onAdd) this._onAdd();
-        else if (window.navigate) window.navigate("/livros/novo");
+        else if (window.gestorController?.showLivroForm) {
+          window.gestorController.showLivroForm(null, () => window.gestorController.showLivrosPage?.());
+        } else if (window.navigate) {
+          window.navigate("/livros/novo");
+        }
       };
     }
 
@@ -145,17 +147,23 @@ class LivroList extends HTMLElement {
   }
 
   _bindRowActions() {
-    // EDITAR — passa o OBJETO do livro se disponível (compatível com showLivroForm(livro))
+    // EDITAR — usa callback; fallback: controller SPA; último caso: navigate
     this.querySelectorAll(".edit-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
         const id = Number(btn.dataset.id);
-        const livro = (this._livros || []).find((l) => Number(l?.id) === id);
+        const livro = (this._livros || []).find((l) => Number(l?.id) === id) || { id };
+
         if (this._onEdit) {
-          this._onEdit(livro || { id }); // envia objeto; fallback: {id}
-        } else if (window.navigate) {
-          window.navigate(`/livros/${id}/editar`);
+          this._onEdit(livro);
+          return;
         }
+        if (window.gestorController?.showLivroForm) {
+          window.gestorController.showLivroForm(livro, () => window.gestorController.showLivrosPage?.());
+          return;
+        }
+        // último recurso
+        if (window.navigate) window.navigate(`/livros/${id}/editar`);
       };
     });
 
@@ -183,23 +191,37 @@ class LivroList extends HTMLElement {
       };
     });
 
-    // VISUALIZAR
+    // VISUALIZAR — evita navegar para rota protegida
     this.querySelectorAll(".view-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
         const id = Number(btn.dataset.id);
-        if (this._onView) this._onView(id);
-        else if (window.navigate) window.navigate(`/livros/${id}/detalhe`);
+        if (this._onView) {
+          this._onView(id);
+          return;
+        }
+        if (window.gestorController?.showLivroDetalhe) {
+          window.gestorController.showLivroDetalhe(id);
+          return;
+        }
+        if (window.navigate) window.navigate(`/livros/${id}/detalhe`);
       };
     });
 
-    // EDITAR EXEMPLARES
+    // EDITAR EXEMPLARES — idem
     this.querySelectorAll(".edit-exemplares-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
         const id = Number(btn.dataset.id);
-        if (this._onEditExemplares) this._onEditExemplares(id);
-        else if (window.navigate) window.navigate(`/livros/${id}/exemplares`);
+        if (this._onEditExemplares) {
+          this._onEditExemplares(id);
+          return;
+        }
+        if (window.gestorController?.showLivroExemplaresForm) {
+          window.gestorController.showLivroExemplaresForm(id, () => window.gestorController.showLivrosPage?.());
+          return;
+        }
+        if (window.navigate) window.navigate(`/livros/${id}/exemplares`);
       };
     });
   }

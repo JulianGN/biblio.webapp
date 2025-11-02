@@ -31,19 +31,38 @@ class LivroForm extends HTMLElement {
     return byAttr ? Number(byAttr) : null;
   }
 
-  async _carregarLivroSelecionado() {
+   async _carregarLivroSelecionado() {
     if (this._livroSelecionado) return this._livroSelecionado;
     const id = this._getLivroIdDaURL();
     if (!id) return null;
-    try {
-      // ajuste a rota se necessário (DRF costuma exigir barra final)
-      const livro = await api.get(`/gestor/livros/${id}/`);
-      this._livroSelecionado = livro || null;
-      return this._livroSelecionado;
-    } catch (e) {
-      console.error("[livro-form] Falha ao buscar livro:", e);
-      return null;
+
+    // Tenta as rotas mais prováveis do DRF/Router
+    const candidates = [
+      `/gestor/livros/${id}/`,
+      `/gestor/livros/${id}`,
+      `/livros/${id}/`,
+      `/livros/${id}`,
+    ];
+
+    for (const url of candidates) {
+      try {
+        const data = await api.get(url);
+        if (data && (data.id || data.livro_id)) {
+          // guarda a rota que funcionou para reusar no PUT
+          this._endpointDetail = url;           // exato, com ou sem barra
+          this._endpointBase   = url.replace(/\/\d+\/?$/, "/"); // base para fallback, se precisar
+          this._livroSelecionado = data;
+          console.debug("[livro-form] detalhe OK em:", url);
+          return this._livroSelecionado;
+        }
+      } catch (e) {
+        // silencioso, segue para o próximo
+        console.debug("[livro-form] falhou:", url, e?.response?.status || e?.message);
+      }
     }
+
+    console.error("[livro-form] Nenhum endpoint de detalhe respondeu 200.");
+    return null;
   }
 
   connectedCallback() {
@@ -297,12 +316,34 @@ class LivroForm extends HTMLElement {
       const livroId = this._livroSelecionado?.id || this._livroSelecionado?.livro_id;
 
       (async () => {
-        try {
+                try {
           if (isEdit && livroId) {
-            await api.put(`/gestor/livros/${livroId}/`, payload);
+            // usa exatamente o endpoint que funcionou no GET
+            const endpoint = this._endpointDetail
+              || `/gestor/livros/${livroId}/`; // fallback
+
+            await api.put(endpoint, payload);
             alert("Livro atualizado com sucesso!");
           } else {
-            await api.post("/gestor/livros/", payload);
+            // para criar, tente as bases mais comuns
+            const bases = [
+              "/gestor/livros/",
+              "/livros/",
+              (this._endpointBase || "/gestor/livros/"),
+            ];
+
+            let ok = false, lastErr = null;
+            for (const base of bases) {
+              try {
+                await api.post(base, payload);
+                ok = true;
+                break;
+              } catch (e) {
+                lastErr = e;
+                console.debug("[livro-form] POST falhou em", base, e?.response?.status || e?.message);
+              }
+            }
+            if (!ok) throw lastErr || new Error("Falha ao criar livro (todas as rotas).");
             alert("Livro criado com sucesso!");
           }
           window.navigate?.("/livros");

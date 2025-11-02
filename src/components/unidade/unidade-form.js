@@ -107,11 +107,11 @@ class UnidadeForm extends HTMLElement {
         try {
           if (isEdit && unidadeId) {
             // PUT em /gestor/unidades/{id}/
-            await api.put(`gestor/unidades/${unidadeId}/`, payload);
+            await api.put(`/gestor/unidades/${unidadeId}/`, payload);
             alert("Unidade atualizada com sucesso!");
           } else {
             // POST em /gestor/unidades/
-            await api.post("gestor/unidades/", payload);
+            await api.post("/gestor/unidades/", payload);
             alert("Unidade criada com sucesso!");
           }
           window.navigate && window.navigate("/unidades");

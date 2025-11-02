@@ -239,11 +239,11 @@ class LivroForm extends HTMLElement {
           try {
             if (isEdit && livroId) {
               // PUT em /gestor/livros/{id}/
-              await api.put(`gestor/livros/${livroId}/`, payload);
+              await api.put(`/gestor/livros/${livroId}/`, payload);
               alert("Livro atualizado com sucesso!");
             } else {
               // POST em /gestor/livros/
-              await api.post("gestor/livros/", payload);
+              await api.post("/gestor/livros/", payload);
               alert("Livro criado com sucesso!");
             }
             window.navigate && window.navigate("/livros");

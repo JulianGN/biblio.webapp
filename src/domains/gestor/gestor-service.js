@@ -8,21 +8,30 @@ export class GestorService extends BaseService {
     super();
   }
 
-  // CRUD de Livros
+  /* ============================
+   *           LIVROS
+   * ============================ */
+
+  // Lista todos os livros (API)
   async listarLivros() {
-    return this.get("gestor/livros/");
+    return this.get("/gestor/livros/");
   }
 
+  // Utilitário: normaliza propriedade que pode vir como objeto ou id
   getObjectWithPropId(nomePropriedade, livroData) {
     return {
-      [nomePropriedade]: typeof livroData[nomePropriedade] === "object"
-        ? livroData[nomePropriedade].id
-        : livroData[nomePropriedade]
+      [nomePropriedade]:
+        typeof livroData[nomePropriedade] === "object"
+          ? livroData[nomePropriedade].id
+          : livroData[nomePropriedade],
     };
   }
 
+  // Cria livro (API)
   async adicionarLivro(livroData) {
-    const getObjectId = (nomePropriedade) => this.getObjectWithPropId(nomePropriedade, livroData);
+    const getObjectId = (nomePropriedade) =>
+      this.getObjectWithPropId(nomePropriedade, livroData);
+
     const payload = {
       ...livroData,
       ...getObjectId("genero"),
@@ -32,15 +41,20 @@ export class GestorService extends BaseService {
         exemplares: u.exemplares,
       })),
     };
-    return this.post("gestor/livros/", payload);
+
+    return this.post("/gestor/livros/", payload);
   }
 
+  // Busca livro por id (API)
   async getLivroById(id) {
-    return this.get(`gestor/livros/${id}/`);
+    return this.get(`/gestor/livros/${id}/`);
   }
 
+  // Atualiza livro (API)
   async atualizarLivro(livroId, livroData) {
-    const getObjectId = (nomePropriedade) => this.getObjectWithPropId(nomePropriedade, livroData);
+    const getObjectId = (nomePropriedade) =>
+      this.getObjectWithPropId(nomePropriedade, livroData);
+
     const payload = {
       ...livroData,
       ...getObjectId("genero"),
@@ -50,83 +64,72 @@ export class GestorService extends BaseService {
         exemplares: u.exemplares,
       })),
     };
-    return this.put(`gestor/livros/${livroId}/`, payload);
+
+    return this.put(`/gestor/livros/${livroId}/`, payload);
   }
 
+  // Patch parcial de livro (API)
   async atualizarLivroParcial(livroId, payload) {
-    return this.patch(`gestor/livros/${livroId}/`, payload);
+    return this.patch(`/gestor/livros/${livroId}/`, payload);
   }
 
+  // Remove livro (API)
   async removerLivro(livroId) {
-    const response = await fetch(this.baseUrl + `gestor/livros/${livroId}/`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || `Erro ${response.status}`);
-    }
-    return true;
+    return this.delete(`/gestor/livros/${livroId}/`);
   }
 
-  // CRUD de Unidades
+  /* ============================
+   *          UNIDADES
+   * ============================ */
+
+  // Lista todas as unidades (API)
   async listarUnidades() {
-    return this.get("gestor/unidades/");
+    return this.get("/gestor/unidades/");
   }
 
-  adicionarUnidade(unidadeData) {
-    const newId =
-      this.unidades.length > 0
-        ? Math.max(...this.unidades.map((u) => u.id)) + 1
-        : 1;
-    const unidade = new Unidade({ ...unidadeData, id: newId });
-    this.unidades.push(unidade);
-    return unidade;
+  // === Métodos legados (agora redirecionam para a API) ===
+  // Mantidos para não quebrar chamadas existentes e evitar duplicação via estado local
+
+  // Cria unidade (API)
+  async adicionarUnidade(unidadeData) {
+    // Antes criava id local e fazia push no array (causava duplicação visual)
+    // Agora faz POST real
+    return this.adicionarUnidadeApi(unidadeData);
   }
 
-  atualizarUnidade(unidadeId, unidadeData) {
-    const index = this.unidades.findIndex((u) => u.id === unidadeId);
-    if (index !== -1) {
-      this.unidades[index] = {
-        ...this.unidades[index],
-        ...unidadeData,
-        id: unidadeId,
-      };
-      return this.unidades[index];
-    }
-    return null;
+  // Atualiza unidade (API)
+  async atualizarUnidade(unidadeId, unidadeData) {
+    // Antes mutava array local; agora faz PUT real
+    return this.atualizarUnidadeApi(unidadeId, unidadeData);
   }
 
-  removerUnidade(unidadeId) {
-    this.unidades = this.unidades.filter((u) => u.id !== unidadeId);
+  // Remove unidade (API)
+  async removerUnidade(unidadeId) {
+    // Antes filtrava array local; agora faz DELETE real
+    return this.removerUnidadeApi(unidadeId);
   }
 
+  // ------------------------------------------------------
+
+  // Busca unidade por id (API)
   async getUnidadeById(id) {
-    return this.get(`gestor/unidades/${id}/`);
+    return this.get(`/gestor/unidades/${id}/`);
   }
 
+  // Atualiza unidade (API)
   async atualizarUnidadeApi(unidadeId, unidadeData) {
     const payload = { ...unidadeData };
-    return this.put(`gestor/unidades/${unidadeId}/`, payload);
+    return this.put(`/gestor/unidades/${unidadeId}/`, payload);
   }
 
+  // Remove unidade (API)
   async removerUnidadeApi(unidadeId) {
-    const response = await fetch(
-      this.baseUrl + `gestor/unidades/${unidadeId}/`,
-      {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || `Erro ${response.status}`);
-    }
-    return true;
+    return this.delete(`/gestor/unidades/${unidadeId}/`);
   }
 
+  // Cria unidade (API)
   async adicionarUnidadeApi(unidadeData) {
     const payload = { ...unidadeData };
-    return this.post("gestor/unidades/", payload);
+    return this.post(`/gestor/unidades/`, payload);
   }
 }

@@ -65,7 +65,7 @@ class LivroList extends HTMLElement {
     if (!this._livros || this._livros.length === 0) {
       (async () => {
         try {
-          const data = await api.get("gestor/livros/"); // ← sem /api
+          const data = await api.get("/gestor/livros/"); // ← sem /api
           // aceita array direto ou objeto com results
           this._livros = Array.isArray(data) ? data : (data?.results || []);
           this.render();
@@ -224,7 +224,7 @@ class LivroList extends HTMLElement {
 
         try {
           // DELETE em /gestor/livros/{id}/
-          await api.delete(`gestor/livros/${id}/`);
+          await api.delete(`/gestor/livros/${id}/`);
           this._livros = (this._livros || []).filter((l) => l.id !== id);
           this._rerenderTbody();
         } catch (err) {

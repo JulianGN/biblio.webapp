@@ -20,23 +20,46 @@ export class GestorView {
     const container =
       document.getElementById("livros-list") ||
       document.querySelector("#app-content");
-
     if (!container) return;
 
     container.innerHTML = /* html */ `<livro-list></livro-list>`;
     const livroList = container.querySelector("livro-list");
     if (!livroList) return;
 
-    // Dados
-    livroList.livros = Array.isArray(livros) ? livros : [];
-
-    // ==== BRIDGE: expõe ambas as convenções (onX e verboX) ====
+    // ==== Normaliza handlers ====
     const _onAdd = isFn(onAdd) ? onAdd : noop;
     const _onEdit = isFn(onEdit) ? onEdit : noop;
     const _onDelete = isFn(onDelete) ? onDelete : noop;
     const _onView = isFn(onView) ? onView : noop;
     const _onEditEx = isFn(onEditExemplares) ? onEditExemplares : noop;
 
+    // ==== DECORA os itens com métodos chamados pelo bundle (d.editLivro etc.) ====
+    const safeLivros = Array.isArray(livros) ? livros : [];
+    const livrosDecorados = safeLivros.map((row) => {
+      // evita redecorar em re-render
+      if (
+        isFn(row.editLivro) &&
+        isFn(row.deleteLivro) &&
+        isFn(row.viewLivro) &&
+        isFn(row.editExemplares)
+      ) {
+        return row;
+      }
+      const id = row?.id;
+      // cria um wrapper que preserva "row" atual
+      return {
+        ...row,
+        editLivro: () => _onEdit(row),                 // d.editLivro()
+        deleteLivro: () => _onDelete(id),              // d.deleteLivro()
+        viewLivro: () => _onView(id),                  // d.viewLivro()
+        editExemplares: () => _onEditEx(id),           // d.editExemplares()
+      };
+    });
+
+    // passa os itens decorados para o webcomponent
+    livroList.livros = livrosDecorados;
+
+    // ==== Ponte de compatibilidade também no elemento ====
     const bridgePairs = {
       onAdd: _onAdd,           addLivro: _onAdd,
       onEdit: _onEdit,         editLivro: _onEdit,
@@ -44,11 +67,9 @@ export class GestorView {
       onView: _onView,         viewLivro: _onView,
       onEditExemplares: _onEditEx, editExemplares: _onEditEx,
     };
-
-    // Define direto nas props do elemento
     Object.entries(bridgePairs).forEach(([k, v]) => (livroList[k] = v));
 
-    // ==== Fallbacks globais (para bundles que chamam window.editLivro, etc.) ====
+    // ==== Fallbacks globais (para bundles que chamam window.*) ====
     try {
       window.addLivro = _onAdd;
       window.editLivro = _onEdit;
@@ -57,21 +78,33 @@ export class GestorView {
       window.editExemplares = _onEditEx;
     } catch {}
 
-    // ==== Reatribuição pós-connectedCallback (evita corrida) ====
-    // Alguns webcomponents sobrescrevem/limpam as props durante render().
-    // Garantimos que, após a microtask do render interno, as funções ainda existam.
+    // ==== Reatribuição pós-connectedCallback (corrida de ciclo de vida) ====
     queueMicrotask(() => {
       Object.entries(bridgePairs).forEach(([k, v]) => {
         if (!isFn(livroList[k])) livroList[k] = v;
       });
+      // se o componente reprocessou a lista, garanta que os itens mantenham os métodos
+      if (Array.isArray(livroList.livros)) {
+        livroList.livros = livroList.livros.map((row) => ({
+          ...row,
+          editLivro: isFn(row.editLivro) ? row.editLivro : () => _onEdit(row),
+          deleteLivro: isFn(row.deleteLivro) ? row.deleteLivro : () => _onDelete(row?.id),
+          viewLivro: isFn(row.viewLivro) ? row.viewLivro : () => _onView(row?.id),
+          editExemplares: isFn(row.editExemplares)
+            ? row.editExemplares
+            : () => _onEditEx(row?.id),
+        }));
+      }
     });
 
-    // ==== Se o webcomponent emitir CustomEvents, capturamos também ====
+    // ==== CustomEvents (se o webcomponent emite) ====
     livroList.addEventListener("livro:criar", () => _onAdd?.());
     livroList.addEventListener("livro:editar", (e) => _onEdit?.(e.detail));
     livroList.addEventListener("livro:excluir", (e) => _onDelete?.(e.detail?.id ?? e.detail));
     livroList.addEventListener("livro:ver", (e) => _onView?.(e.detail?.id ?? e.detail));
-    livroList.addEventListener("livro:exemplares", (e) => _onEditEx?.(e.detail?.id ?? e.detail));
+    livroList.addEventListener("livro:exemplares", (e) =>
+      _onEditEx?.(e.detail?.id ?? e.detail)
+    );
   }
 
   renderLivroForm(
@@ -249,13 +282,10 @@ export class GestorView {
     if (!container) return;
 
     container.innerHTML = /* html */ `<unidade-list></unidade-list>`;
-
     const unidadeList = container.querySelector("unidade-list");
     if (!unidadeList) return;
 
     unidadeList.unidades = Array.isArray(unidades) ? unidades : [];
-
-    // Ponte mínima para futuros bundles
     unidadeList.onAdd = isFn(onAdd) ? onAdd : noop;
     unidadeList.onEdit = isFn(onEdit) ? onEdit : noop;
     unidadeList.onDelete = isFn(onDelete) ? onDelete : noop;
@@ -367,7 +397,6 @@ export class GestorView {
       </div>
     `;
 
-    // Unidades disponíveis: tenta do controller.initData; cai pra lista vazia se não houver
     const unidadesDisponiveis =
       (window.gestorController &&
         window.gestorController.initData &&
@@ -375,8 +404,6 @@ export class GestorView {
         window.gestorController.initData.unidades) ||
       [];
 
-    // Monta estrutura: todas as unidades disponíveis devem aparecer, com 0 por padrão,
-    // mesclando as que o livro já possua.
     const existentes = new Map(
       (Array.isArray(livro?.unidades) ? livro.unidades : []).map((u) => [
         normalizeId(u?.unidade),
@@ -432,7 +459,6 @@ export class GestorView {
     const form = document.getElementById("exemplares-form");
     form.onsubmit = (e) => {
       e.preventDefault();
-      // Mantém compat: envia [{unidade: obj, exemplares:Number}]
       onSave && onSave(exemplaresPorUnidade);
     };
   }

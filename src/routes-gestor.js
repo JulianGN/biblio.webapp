@@ -1,4 +1,4 @@
-// 📁 src/routes/gestor-routes.js (ou onde você definiu esse export)
+// 📁 src/routes/gestor-routes.js
 export async function gestorRoutes({ gestorController, gestorView, navigate }) {
   const path = window.location.pathname;
 
@@ -31,14 +31,14 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
   /* ─────────────────────────────────────────
    *  Detalhes (antes do switch)
    * ───────────────────────────────────────── */
-  if (/^\/livros\/[0-9]+\/detalhe$/.test(path)) {
+  if (/^\/livros\/[0-9]+\/detalhe\/?$/.test(path)) {
     renderShell();
     const id = parseInt(path.split("/")[2], 10);
     await gestorController.showLivroDetalhe(id);
     return true;
   }
 
-  if (/^\/unidades\/[0-9]+\/detalhe$/.test(path)) {
+  if (/^\/unidades\/[0-9]+\/detalhe\/?$/.test(path)) {
     renderShell();
     const id = parseInt(path.split("/")[2], 10);
     await gestorController.showUnidadeDetalhe(id);
@@ -49,8 +49,16 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
    *  Edição dinâmica
    * ───────────────────────────────────────── */
 
-  // /livros/:id  → abrir form via controller (corrige chamada inexistente editLivro)
-  if (/^\/livros\/[0-9]+$/.test(path)) {
+  // ✅ /livros/:id/editar  → abrir form de edição com ID na URL
+  if (/^\/livros\/[0-9]+\/editar\/?$/.test(path)) {
+    renderShell();
+    const id = parseInt(path.split("/")[2], 10);
+    await gestorController.showLivroForm(id, () => navigate("/livros"));
+    return true;
+  }
+
+  // Fallback: /livros/:id  → também abre o form (caso alguém acesse direto)
+  if (/^\/livros\/[0-9]+\/?$/.test(path)) {
     renderShell();
     const id = parseInt(path.split("/")[2], 10);
     await gestorController.showLivroForm(id, () => navigate("/livros"));
@@ -58,7 +66,7 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
   }
 
   // /unidades/:id  → editar unidade
-  if (/^\/unidades\/[0-9]+$/.test(path)) {
+  if (/^\/unidades\/[0-9]+\/?$/.test(path)) {
     renderShell();
     const id = parseInt(path.split("/")[2], 10);
     await gestorController.editUnidade(id, () => navigate("/unidades"));
@@ -66,7 +74,7 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
   }
 
   // /livros/:id/exemplares  → form de exemplares por unidade
-  if (/^\/livros\/[0-9]+\/exemplares$/.test(path)) {
+  if (/^\/livros\/[0-9]+\/exemplares\/?$/.test(path)) {
     renderShell();
     const id = parseInt(path.split("/")[2], 10);
     await gestorController.showLivroExemplaresForm(id, () => navigate("/livros"));
@@ -81,10 +89,10 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
       renderShell();
       document.querySelector("#app-content").innerHTML = `<div id="livros-list"></div>`;
 
-      // ⚠️ Importante: use o controller direto, sem navegar para /livros/:id
+      // ⚠️ Mudança: agora NAVEGA para /livros/:id/editar para o form captar o ID da URL
       await gestorController.showLivrosPage({
-        onAdd: () => gestorController.showLivroForm(null, () => navigate("/livros")),
-        onEdit: (id) => gestorController.showLivroForm(id, () => navigate("/livros")),
+        onAdd: () => navigate("/livros/novo"),
+        onEdit: (id) => navigate(`/livros/${id}/editar`),          // ← aqui!
         onDelete: async (id) => {
           await gestorController.removerLivro(id);
           await gestorController.showLivrosPage({}); // re-render da lista
@@ -118,7 +126,6 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
 
     case "/unidades/novo": {
       renderShell();
-      // ✅ não existe showUnidadeForm — usamos editUnidade(null)
       await gestorController.editUnidade(null, () => navigate("/unidades"));
       return true;
     }

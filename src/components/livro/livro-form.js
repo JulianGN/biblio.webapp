@@ -100,6 +100,8 @@ class LivroForm extends HTMLElement {
 
 
   connectedCallback() {
+    if (this._mounted) return;  // ⬅️ evita render duplicado
+  this._mounted = true;
     const isEdit = this.hasAttribute("edit");
 
     /* ---------------- Helpers & dados base ---------------- */
@@ -230,6 +232,14 @@ class LivroForm extends HTMLElement {
         </div>
       </form>
     `;
+
+    // 🔒 Remoção defensiva de duplicados de "Tipo de Obra"
+const tipoObraSelects = this.querySelectorAll('#tipo_obra');
+for (let i = 1; i < tipoObraSelects.length; i++) {
+  const field = tipoObraSelects[i];
+  const group = field.closest('div'); // <div> do campo
+  (group || field).remove();
+}
 
     /* ---------------- Comportamento ---------------- */
     const voltarBtn = this.querySelector("#voltar-btn");

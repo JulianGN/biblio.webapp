@@ -1,5 +1,5 @@
 // 📄 src/components/livro/livro-exemplares.js
-import { BaseService } from "../../domains/base-service.js"; // <- caminho corrigido!
+import { BaseService } from "../../domains/base-service.js"; // <- caminho corrigido1!
 
 const api = new BaseService();
 

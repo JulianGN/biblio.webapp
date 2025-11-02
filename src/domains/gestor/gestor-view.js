@@ -20,29 +20,35 @@ export class GestorView {
 
     if (!container) return;
 
-    container.innerHTML = /* html */ `
-      <livro-list></livro-list>
-    `;
-
+    container.innerHTML = /* html */ `<livro-list></livro-list>`;
     const livroList = container.querySelector("livro-list");
     if (!livroList) return;
 
-    livroList.livros = livros || [];
-    livroList.onAdd = onAdd;
-    livroList.onEdit = onEdit;
-    livroList.onDelete = onDelete;
-    livroList.onView = onView;
-    livroList.onEditExemplares = onEditExemplares;
+    livroList.livros = Array.isArray(livros) ? livros : [];
+
+    // 🔧 Ponte de compatibilidade (para bundles antigos)
+    const bridge = {
+      onAdd, addLivro: onAdd,
+      onEdit, editLivro: onEdit,
+      onDelete, deleteLivro: onDelete,
+      onView, viewLivro: onView,
+      onEditExemplares, editExemplares: onEditExemplares,
+    };
+    Object.entries(bridge).forEach(([k, v]) => {
+      if (typeof v === "function") livroList[k] = v;
+    });
+
+    // Se o webcomponent emitir eventos personalizados
+    livroList.addEventListener("livro:editar", (e) => onEdit?.(e.detail));
+    livroList.addEventListener("livro:criar", () => onAdd?.());
+    livroList.addEventListener("livro:excluir", (e) => onDelete?.(e.detail?.id));
+    livroList.addEventListener("livro:ver", (e) => onView?.(e.detail?.id));
+    livroList.addEventListener("livro:exemplares", (e) =>
+      onEditExemplares?.(e.detail?.id)
+    );
   }
 
-  renderLivroForm(
-    onSubmit,
-    livro = null,
-    onBack = null,
-    generos = [],
-    unidades = [],
-    tipo_obras = []
-  ) {
+  renderLivroForm(onSubmit, livro = null, onBack = null, generos = [], unidades = [], tipo_obras = []) {
     const root = document.querySelector("#app-content");
     if (!root) return;
 
@@ -55,14 +61,12 @@ export class GestorView {
     const livroFormEl = document.querySelector("livro-form");
     if (!livroFormEl) return;
 
-    // Disponíveis e selecionadas (para o webcomponent usar)
     livroFormEl._unidadesDisponiveis = Array.isArray(unidades) ? unidades : [];
     if (livro && Array.isArray(livro.unidades)) {
       livroFormEl._unidadesSelecionadas = livro.unidades;
       livroFormEl._livroSelecionado = livro;
     }
 
-    // Preenche campos básicos quando em edição
     if (livro) {
       if (livroFormEl.titulo) livroFormEl.titulo.value = livro.titulo ?? "";
       if (livroFormEl.autor) livroFormEl.autor.value = livro.autor ?? "";
@@ -75,24 +79,16 @@ export class GestorView {
       if (livroFormEl.idioma) livroFormEl.idioma.value = livro.idioma ?? "";
     }
 
-    /* -------------------------------
-       Select de Gênero (robusto)
-    --------------------------------*/
-    let generoSelect = null;
-    const generoInput = livroFormEl.querySelector(
-      'input[name="genero"], input#genero'
-    );
-
+    /* ----- Select de Gênero ----- */
     const generoHtml = `
       <label for="genero">Gênero:</label>
       <select id="genero" name="genero" required>
         <option value="">Selecione o gênero</option>
-        ${(generos || [])
-          .map((g) => `<option value="${g.id}">${g.nome}</option>`)
-          .join("")}
+        ${(generos || []).map((g) => `<option value="${g.id}">${g.nome}</option>`).join("")}
       </select>
     `;
-
+    const generoInput = livroFormEl.querySelector('input[name="genero"], input#genero');
+    let generoSelect = null;
     if (generoInput) {
       const generoDiv = generoInput.closest("div");
       if (generoDiv) {
@@ -100,43 +96,25 @@ export class GestorView {
         generoSelect = generoDiv.querySelector("select#genero");
       }
     } else {
-      // Se não encontrou input, insere antes do bloco de unidades
-      const unidadeSelect = livroFormEl.querySelector("select#unidade-select");
-      const unidadeDiv = unidadeSelect ? unidadeSelect.closest("div") : null;
       const generoDiv = document.createElement("div");
       generoDiv.innerHTML = generoHtml;
-      if (unidadeDiv && unidadeDiv.parentNode) {
-        unidadeDiv.parentNode.insertBefore(generoDiv, unidadeDiv);
-      } else {
-        livroFormEl.appendChild(generoDiv);
-      }
+      livroFormEl.appendChild(generoDiv);
       generoSelect = generoDiv.querySelector("select#genero");
     }
-
     if (livro && generoSelect) {
-      // aceita livro.genero (id ou obj) ou livro.generoObj
-      generoSelect.value =
-        normalizeId(livro.genero) || normalizeId(livro.generoObj) || "";
+      generoSelect.value = normalizeId(livro.genero) || normalizeId(livro.generoObj) || "";
     }
 
-    /* -----------------------------------
-       Select de Tipo de Obra (robusto)
-    ------------------------------------*/
-    let tipoObraSelect = null;
-    const tipoObraInput = livroFormEl.querySelector(
-      'input[name="tipo_obra"], input#tipo_obra'
-    );
-
+    /* ----- Select de Tipo de Obra ----- */
     const tipoObraHtml = `
       <label for="tipo_obra">Tipo de Obra:</label>
       <select id="tipo_obra" name="tipo_obra">
         <option value="">Selecione o tipo de obra</option>
-        ${(tipo_obras || [])
-          .map((t) => `<option value="${t.id}">${t.nome}</option>`)
-          .join("")}
+        ${(tipo_obras || []).map((t) => `<option value="${t.id}">${t.nome}</option>`).join("")}
       </select>
     `;
-
+    const tipoObraInput = livroFormEl.querySelector('input[name="tipo_obra"], input#tipo_obra');
+    let tipoObraSelect = null;
     if (tipoObraInput) {
       const tipoDiv = tipoObraInput.closest("div");
       if (tipoDiv) {
@@ -149,21 +127,15 @@ export class GestorView {
       livroFormEl.appendChild(tipoDiv);
       tipoObraSelect = tipoDiv.querySelector("select#tipo_obra");
     }
-
     if (livro && tipoObraSelect) {
-      tipoObraSelect.value =
-        normalizeId(livro.tipo_obra) ||
-        normalizeId(livro.tipo_obraObj) ||
-        "";
+      tipoObraSelect.value = normalizeId(livro.tipo_obra) || normalizeId(livro.tipo_obraObj) || "";
     }
 
-    // Submit
-    livroFormEl.addEventListener("submit", (event) => {
-      event.preventDefault();
+    livroFormEl.addEventListener("submit", (e) => {
+      e.preventDefault();
       onSubmit && onSubmit(livroFormEl);
     });
 
-    // Voltar (se existir)
     const voltarBtn = document.getElementById("voltar-btn");
     if (onBack && voltarBtn) voltarBtn.onclick = onBack;
   }

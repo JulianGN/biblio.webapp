@@ -20,9 +20,7 @@ class LivroList extends HTMLElement {
     this._livros = Array.isArray(livros) ? livros : [];
     this.render();
   }
-  get livros() {
-    return this._livros || [];
-  }
+  get livros() { return this._livros || []; }
 
   set onEdit(cb)           { this._onEdit = typeof cb === "function" ? cb : null; this.render(); }
   set onDelete(cb)         { this._onDelete = typeof cb === "function" ? cb : null; this.render(); }
@@ -43,8 +41,6 @@ class LivroList extends HTMLElement {
 
   connectedCallback() {
     this.render();
-
-    // Se ninguém injetou dados, carrega da API
     if (!this._livros || this._livros.length === 0) {
       (async () => {
         try {
@@ -55,7 +51,8 @@ class LivroList extends HTMLElement {
           console.error("Falha ao carregar livros:", e);
           const tbody = this.querySelector("#livros-tbody");
           if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#c00;">Falha ao carregar livros.</td></tr>`;
+            tbody.innerHTML =
+              `<tr><td colspan="4" style="text-align:center;color:#c00;">Falha ao carregar livros.</td></tr>`;
           }
         }
       })();
@@ -66,7 +63,7 @@ class LivroList extends HTMLElement {
     this.innerHTML = /* html */ `
       <div class="livro-list-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
         <h2 style="margin:0;">Lista de Livros</h2>
-        <button id="add-livro-btn" class="outline">
+        <button type="button" id="add-livro-btn" class="outline" data-stop-route>
           <i class="fa-solid fa-plus"></i> <span class="d-sm-none">Adicionar Livro</span>
         </button>
       </div>
@@ -95,16 +92,13 @@ class LivroList extends HTMLElement {
     const addBtn = this.querySelector("#add-livro-btn");
     if (addBtn) {
       addBtn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (this._onAdd) {
-          this._onAdd();
-          return;
-        }
-        // Fallback 100% SPA (sem rota)
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        if (this._onAdd) { this._onAdd(); return false; }
         if (window.gestorController?.showLivroForm) {
           window.gestorController.showLivroForm(null, () => window.gestorController.showLivrosPage?.());
+          return false;
         }
+        return false;
       };
     }
 
@@ -137,10 +131,10 @@ class LivroList extends HTMLElement {
           <td>${livro.isbn ?? ""}</td>
           <td>
             <div class="list-actions livro-list-actions">
-              <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-              <button class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
-              <button class="edit-exemplares-livro-icon outline border-0" data-id="${livro.id}" title="Exemplares por unidade"><i class="fa-solid fa-list-ol"></i></button>
-              <button class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
+              <button type="button" class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar" data-stop-route><i class="fa-solid fa-eye"></i></button>
+              <button type="button" class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar" data-stop-route><i class="fa-solid fa-pen-to-square"></i></button>
+              <button type="button" class="edit-exemplares-livro-icon outline border-0" data-id="${livro.id}" title="Exemplares por unidade" data-stop-route><i class="fa-solid fa-list-ol"></i></button>
+              <button type="button" class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir" data-stop-route><i class="fa-solid fa-trash-can"></i></button>
             </div>
           </td>
         </tr>
@@ -151,56 +145,55 @@ class LivroList extends HTMLElement {
   }
 
   _bindRowActions() {
+    const killRoute = (e) => {
+      if (!e) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      return false;
+    };
+
     // ===== EDITAR =====
     this.querySelectorAll(".edit-livro-icon").forEach((btn) => {
       btn.onclick = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
+        killRoute(e);
         const id = Number(btn.dataset.id);
-        // tenta achar o objeto completo na lista atual
+
+        // pega o objeto completo, se já estiver listado
         let livro = (this._livros || []).find((l) => Number(l?.id) === id);
 
-        // preferir callback vindo da View/Controller
         if (this._onEdit) {
-          this._onEdit(livro || { id }); // View cuida de buscar se precisar
-          return;
+          this._onEdit(livro || { id });
+          return false;
         }
 
-        // fallback SPA: chamar controller diretamente (sem rota)
         if (window.gestorController?.showLivroForm) {
-          // se não tivermos os dados completos, busca pela API antes de abrir o form
-          if (!livro || !livro.titulo) {
-            try {
+          try {
+            // se não tiver dados completos, busca pela API
+            if (!livro || !livro.titulo) {
               livro = await api.get(`/gestor/livros/${id}/`);
-            } catch (err) {
-              console.error("Falha ao buscar livro antes de editar:", err);
-              alert("Não foi possível carregar o livro para edição.");
-              return;
             }
+            window.gestorController.showLivroForm(livro, () => window.gestorController.showLivrosPage?.());
+          } catch (err) {
+            console.error("Falha ao buscar livro antes de editar:", err);
+            alert("Não foi possível carregar o livro para edição.");
           }
-          window.gestorController.showLivroForm(livro, () => window.gestorController.showLivrosPage?.());
-          return;
+          return false;
         }
 
-        // SEM NAVEGAÇÃO POR ROTA — nunca chame window.navigate aqui
         alert("Não foi possível abrir o formulário de edição no momento.");
+        return false;
       };
     });
 
     // ===== EXCLUIR =====
     this.querySelectorAll(".delete-livro-icon").forEach((btn) => {
       btn.onclick = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
+        killRoute(e);
         const id = Number(btn.dataset.id);
-        if (!window.confirm("Tem certeza que deseja excluir este livro?")) return;
+        if (!window.confirm("Tem certeza que deseja excluir este livro?")) return false;
 
-        if (this._onDelete) {
-          this._onDelete(id);
-          return;
-        }
+        if (this._onDelete) { this._onDelete(id); return false; }
 
         try {
           await api.delete(`/gestor/livros/${id}/`);
@@ -211,46 +204,39 @@ class LivroList extends HTMLElement {
           const msg = err?.response?.data?.message || err?.message || "Erro ao excluir o livro.";
           alert(msg);
         }
+        return false;
       };
     });
 
     // ===== VISUALIZAR =====
     this.querySelectorAll(".view-livro-icon").forEach((btn) => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
+      btn.onclick = async (e) => {
+        killRoute(e);
         const id = Number(btn.dataset.id);
 
-        if (this._onView) {
-          this._onView(id);
-          return;
-        }
+        if (this._onView) { this._onView(id); return false; }
         if (window.gestorController?.showLivroDetalhe) {
           window.gestorController.showLivroDetalhe(id);
-          return;
+          return false;
         }
         alert("Não foi possível abrir os detalhes agora.");
+        return false;
       };
     });
 
     // ===== EDITAR EXEMPLARES =====
     this.querySelectorAll(".edit-exemplares-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
+        killRoute(e);
         const id = Number(btn.dataset.id);
 
-        if (this._onEditExemplares) {
-          this._onEditExemplares(id);
-          return;
-        }
+        if (this._onEditExemplares) { this._onEditExemplares(id); return false; }
         if (window.gestorController?.showLivroExemplaresForm) {
           window.gestorController.showLivroExemplaresForm(id, () => window.gestorController.showLivrosPage?.());
-          return;
+          return false;
         }
         alert("Não foi possível abrir a edição de exemplares agora.");
+        return false;
       };
     });
   }

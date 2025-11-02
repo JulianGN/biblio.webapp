@@ -61,31 +61,43 @@ class LivroForm extends HTMLElement {
   }
 
   async _carregarLivroSelecionado() {
-    if (this._livroSelecionado) return this._livroSelecionado;
-    const id = this._getLivroIdDaURL();
-    if (!id) return null;
+  if (this._livroSelecionado) return this._livroSelecionado;
 
-    for (const url of this._candidatesFor(id)) {
-      try {
-        const data = await api.get(url);
-        // Aceita formatos comuns: {id:1,...} ou {livro:{...}}
-        const livro = data?.id ? data : (data?.livro || null);
-        if (livro && (livro.id || livro.livro_id || Number(id))) {
-          this._endpointDetail = url;
-          this._endpointBase = this._inferBaseFrom(url);
-          // se veio envolto, desencaixa
-          this._livroSelecionado = livro;
-          console.debug("[livro-form] detalhe OK em:", url, "base:", this._endpointBase);
-          return this._livroSelecionado;
-        }
-      } catch (e) {
-        console.debug("[livro-form] falhou:", url, e?.response?.status || e?.message);
-      }
-    }
-
-    console.error("[livro-form] Nenhum endpoint de detalhe respondeu 200.");
-    return null;
+  // tenta obter o ID por atributo, query (?editar=) ou path (/livros/:id/editar)
+  const qs = new URLSearchParams(location.search);
+  let id = this.getAttribute("livro-id") || qs.get("editar");
+  if (!id) {
+    const m = location.pathname.match(/\/livros\/(\d+)(?:\/editar)?\/?$/);
+    id = m?.[1];
   }
+  id = id ? Number(id) : null;
+  if (!id) return null;
+
+  // ✅ DRF real: /gestor/livros/:id/ (fallback: /livros/:id/)
+  const candidates = [
+    `/gestor/livros/${id}/`,
+    `/livros/${id}/`,
+  ];
+
+  for (const url of candidates) {
+    try {
+      const data = await api.get(url);
+      if (data && (data.id || data.livro_id)) {
+        this._endpointDetail = url;                    // para reusar no PUT
+        this._endpointBase   = url.replace(/\/\d+\/$/, "/"); // vira .../livros/
+        this._livroSelecionado = data;
+        console.debug("[livro-form] detalhe OK em:", url);
+        return data;
+      }
+    } catch (e) {
+      console.debug("[livro-form] falhou:", url, e?.response?.status || e?.message);
+    }
+  }
+
+  console.error("[livro-form] não encontrou endpoint de detalhe para id", id);
+  return null;
+}
+
 
   connectedCallback() {
     const isEdit = this.hasAttribute("edit");

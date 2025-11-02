@@ -1,36 +1,45 @@
 // 📁 src/domains/base-service.js
 export class BaseService {
   constructor(baseUrl) {
-    // Permite configurar por várias fontes:
+    // Fontes possíveis:
     // 1) parâmetro do construtor
     // 2) VITE_API_URL (recomendado)
     // 3) VITE_API_BASE_URL (legado)
     // 4) window.API_URL (fallback runtime)
     // 5) default onrender (produção)
-    const env = (typeof import !== "undefined" && import.meta?.env) || {};
+    let viteEnv = {};
+    try {
+      // Em bundlers como Vite, import.meta existe em tempo de build
+      if (typeof import.meta !== "undefined" && import.meta && import.meta.env) {
+        viteEnv = import.meta.env;
+      }
+    } catch {
+      // ignora em ambientes sem import.meta
+      viteEnv = {};
+    }
+
     const fromEnv =
       baseUrl ||
-      env.VITE_API_URL ||
-      env.VITE_API_BASE_URL ||
+      viteEnv.VITE_API_URL ||
+      viteEnv.VITE_API_BASE_URL ||
       (typeof window !== "undefined" && window.API_URL) ||
       "https://biblio-webapi.onrender.com";
 
-    const trimmed = String(fromEnv).trim();
-    // Normaliza: remove barra final
-    this.baseUrl = trimmed.replace(/\/+$/, "");
+    // Normaliza baseUrl sem barra final
+    this.baseUrl = String(fromEnv).trim().replace(/\/+$/, "");
 
     // Timeout e retries
-    this.defaultTimeoutMs = 65_000; // 65s (cold start / rede lenta)
-    this.maxRetries = 2;            // total = 1 (original) + 2 retries
-    this.backoffMs = [1200, 3000];  // esperas entre tentativas
+    this.defaultTimeoutMs = 65_000; // 65s
+    this.maxRetries = 2;            // total = 1 + 2 retries
+    this.backoffMs = [1200, 3000];  // backoff entre tentativas
   }
 
-  /** Junta baseUrl + path com segurança */
+  /** Concatena baseUrl + path com segurança */
   buildUrl(path = "") {
     const p = String(path || "");
-    // Se path já é absoluto (http...), retorna como está
+    // Se já é absoluto (http/https), devolve como está
     if (/^https?:\/\//i.test(p)) return p;
-    // Remove barras extras no começo do path e concatena com uma única barra
+    // Remove barras extras no começo do path e concatena
     return `${this.baseUrl}/${p.replace(/^\/+/, "")}`;
   }
 
@@ -62,7 +71,6 @@ export class BaseService {
 
         clearTimeout(timerId);
 
-        // 204 No Content
         if (res.status === 204) return {};
 
         const contentType = res.headers.get("content-type") || "";
@@ -73,27 +81,19 @@ export class BaseService {
           if (vercelHint === "NOT_FOUND") {
             throw new Error(`404 (Vercel NOT_FOUND) na URL: ${url}`);
           }
-          // Inclui status, statusText e corpo para facilitar o debug
           const detail = raw || res.statusText || "Erro HTTP";
           throw new Error(`Erro ${res.status} em ${url} — ${detail}`);
         }
 
-        // Prioriza JSON
         if (contentType.includes("application/json")) {
-          // evita erro quando body vazio
           const text = await res.text();
           return text ? JSON.parse(text) : {};
         }
-
-        // Texto simples
         if (contentType.startsWith("text/")) {
           return await res.text();
         }
-
-        // Tentativas finais de parse
         try { return await res.json(); } catch {}
         try { return await res.text(); } catch {}
-
         return {};
       } catch (err) {
         clearTimeout(timerId);
@@ -109,14 +109,12 @@ export class BaseService {
           msg.includes("load failed") ||
           msg.includes("typeerror: network");
 
-        // Retry apenas para erro de rede/timeout
         if (attempt < this.maxRetries && isNetwork) {
           const wait = this.backoffMs[attempt] ?? 2000;
           await new Promise((r) => setTimeout(r, wait));
           continue;
         }
 
-        // Última tentativa falhou → propaga mensagem mais amigável
         if (isAbort) {
           throw new Error("Tempo de requisição excedido. Verifique sua conexão e tente novamente.");
         }
@@ -127,14 +125,13 @@ export class BaseService {
       }
     }
 
-    // fallback (não deveria chegar aqui)
     throw lastErr || new Error("Falha desconhecida ao acessar a API.");
   }
 
   // Helpers HTTP
-  get(endpoint, options = {})    { return this.request(endpoint, { ...options, method: "GET" }); }
-  post(endpoint, body, options = {})  { return this.request(endpoint, { ...options, method: "POST", body }); }
-  patch(endpoint, body, options = {}) { return this.request(endpoint, { ...options, method: "PATCH", body }); }
-  put(endpoint, body, options = {})   { return this.request(endpoint, { ...options, method: "PUT", body }); }
-  delete(endpoint, options = {})      { return this.request(endpoint, { ...options, method: "DELETE" }); }
+  get(endpoint, options = {})           { return this.request(endpoint, { ...options, method: "GET" }); }
+  post(endpoint, body, options = {})    { return this.request(endpoint, { ...options, method: "POST", body }); }
+  patch(endpoint, body, options = {})   { return this.request(endpoint, { ...options, method: "PATCH", body }); }
+  put(endpoint, body, options = {})     { return this.request(endpoint, { ...options, method: "PUT", body }); }
+  delete(endpoint, options = {})        { return this.request(endpoint, { ...options, method: "DELETE" }); }
 }

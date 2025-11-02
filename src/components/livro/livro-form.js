@@ -8,6 +8,42 @@ class LivroForm extends HTMLElement {
   constructor() {
     super();
     this._livroUnidades = [];
+    this._livroSelecionado = null;
+    this._unidadesDisponiveis = null;
+    this._tipoObrasDisponiveis = null;
+  }
+
+  /* ===== Setters opcionais (permitem injeção externa, se houver) ===== */
+  set livroSelecionado(v) { this._livroSelecionado = v || null; }
+  set unidadesDisponiveis(v) { this._unidadesDisponiveis = Array.isArray(v) ? v : []; }
+  set tipoObrasDisponiveis(v) { this._tipoObrasDisponiveis = Array.isArray(v) ? v : []; }
+
+  /* ===== Helpers de URL / carregamento ===== */
+  _getLivroIdDaURL() {
+    const qs = new URLSearchParams(location.search);
+    const byQuery = qs.get("editar");
+    if (byQuery) return Number(byQuery);
+
+    const m = location.pathname.match(/\/livros\/(\d+)/);
+    if (m?.[1]) return Number(m[1]);
+
+    const byAttr = this.getAttribute("livro-id");
+    return byAttr ? Number(byAttr) : null;
+  }
+
+  async _carregarLivroSelecionado() {
+    if (this._livroSelecionado) return this._livroSelecionado;
+    const id = this._getLivroIdDaURL();
+    if (!id) return null;
+    try {
+      // ajuste a rota se necessário (DRF costuma exigir barra final)
+      const livro = await api.get(`/gestor/livros/${id}/`);
+      this._livroSelecionado = livro || null;
+      return this._livroSelecionado;
+    } catch (e) {
+      console.error("[livro-form] Falha ao buscar livro:", e);
+      return null;
+    }
   }
 
   connectedCallback() {
@@ -55,7 +91,7 @@ class LivroForm extends HTMLElement {
       }).filter((u) => u?.unidade?.id != null);
     }
 
-    // 2) Se está em edição e ainda não possuímos estado, hidrata do livro selecionado
+    // 2) Se está em edição e ainda não possuímos estado, hidrata do livro selecionado (se já existir)
     if (
       isEdit &&
       (!Array.isArray(this._livroUnidades) || this._livroUnidades.length === 0) &&
@@ -280,9 +316,9 @@ class LivroForm extends HTMLElement {
       })();
     });
 
-    // Preenche campos básicos quando em edição
-    if (isEdit && this._livroSelecionado) {
-      const livro = this._livroSelecionado;
+    /* ---------------- Hidratação automática quando em edição ---------------- */
+    const hidratarDoLivro = (livro) => {
+      if (!livro) return;
       const f = this.querySelector("#livro-form");
       if (f) {
         f.titulo && (f.titulo.value = livro.titulo || "");
@@ -293,12 +329,29 @@ class LivroForm extends HTMLElement {
         f.paginas && (f.paginas.value = livro.paginas || "");
         f.capa && (f.capa.value = livro.capa && livro.capa !== "null" ? livro.capa : "");
         f.idioma && (f.idioma.value = livro.idioma || "");
-        f.genero && (f.genero.value = (typeof livro.genero === "object" ? livro.genero?.id : livro.genero) || "");
-        f.tipo_obra && (f.tipo_obra.value = (typeof livro.tipo_obra === "object" ? livro.tipo_obra?.id : livro.tipo_obra) || "");
+        f.genero && (f.genero.value =
+          (typeof livro.genero === "object" ? livro.genero?.id : livro.genero) || "");
+        f.tipo_obra && (f.tipo_obra.value =
+          (typeof livro.tipo_obra === "object" ? livro.tipo_obra?.id : livro.tipo_obra) || "");
       }
 
-      // Se o controller atualizar _livroSelecionado dinamicamente, reidrate chamando:
+      // Hidrata unidades (prioriza `unidades_detalhe`, fallback `unidades`)
+      const raw = Array.isArray(livro?.unidades_detalhe) && livro.unidades_detalhe.length
+        ? livro.unidades_detalhe
+        : (livro?.unidades || []);
+      const pre = mapQualquerUnidadesParaState(raw);
+      if (pre.length) this._livroUnidades = pre;
       this._renderUnidadesList();
+    };
+
+    if (isEdit) {
+      if (this._livroSelecionado) {
+        // já veio injetado
+        hidratarDoLivro(this._livroSelecionado);
+      } else {
+        // busca do backend se não veio injetado
+        this._carregarLivroSelecionado().then((livro) => hidratarDoLivro(livro));
+      }
     }
   }
 }

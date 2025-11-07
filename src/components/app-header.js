@@ -1,5 +1,14 @@
 import "./app-header.css";
 
+// ADICIONADO: helper de navegação com fallback
+function go(path) {
+  if (typeof window !== "undefined") {
+    if (window.navigate) return window.navigate(path); // SPA
+    return (window.location.href = path);              // fallback hard reload
+  }
+}
+
+// Web Component para o header compartilhado
 class AppHeader extends HTMLElement {
   connectedCallback() {
     const path = window.location.pathname;
@@ -91,7 +100,8 @@ class AppHeader extends HTMLElement {
     
     this.querySelector("#logo-bibliotecas").onclick = (e) => {
       e.preventDefault();
-      window.navigate && window.navigate("/livros");
+      // window.navigate && window.navigate("/livros"); // original
+      go("/livros"); // ADICIONADO
     };
     
     this.querySelector("#menu-livros-btn").onclick = (e) => {

@@ -1,3 +1,4 @@
+// 📁 src/domains/gestor/gestor-controller.js
 // Controller do domínio Gestor
 // Orquestra as ações entre view e service
 
@@ -5,7 +6,7 @@ import { GestorService } from "./gestor-service.js";
 import { GestorView } from "./gestor-view.js";
 import { GestorInitService } from "./gestor-init-service.js";
 
-// Função de navegação SPA (espera-se que esteja global ou na main.js)
+// Função de navegação SPA
 const navigate =
   window.navigate ||
   ((path) => {
@@ -16,17 +17,37 @@ const navigate =
 export class GestorController {
   constructor() {
     this.service = new GestorService();
-  this.initService = new GestorInitService();
-  this.initData = { generos: [], unidades: [], tipo_obras: [] };
+    this.initService = new GestorInitService();
+    this.initData = { generos: [], unidades: [], tipo_obras: [] };
+    this.view = null;
+
+    // Disponibiliza para componentes/Views que leem do window
+    window.gestorController = this;
+
+    // caches
+    this._livrosCache = null;
+    this._unidadesCache = null;
+    this._lastCallbacks = null;
   }
 
   async fetchInitData() {
-    this.initData = await this.initService.getInitData();
+    try {
+      const data = await this.initService.getInitData();
+      this.initData = {
+        generos: Array.isArray(data.generos) ? data.generos : [],
+        unidades: Array.isArray(data.unidades) ? data.unidades : [],
+        tipo_obras: Array.isArray(data.tipo_obras) ? data.tipo_obras : [],
+      };
+    } catch (err) {
+      console.error("Erro ao carregar initData:", err);
+      alert("Não foi possível carregar listas iniciais (gêneros/unidades/tipos).");
+    }
   }
 
-  // CRUD de Livros
+  /* ───────────────────────────────
+   * LIVROS — CRUD
+   * ─────────────────────────────── */
   async listarLivros() {
-    // Garante que retorna um array de livros, não uma Promise
     const livros = await this.service.listarLivros();
     return Array.isArray(livros) ? livros : [];
   }
@@ -43,557 +64,259 @@ export class GestorController {
     return this.service.removerLivro(livroId);
   }
 
-  // --- Lógica de UI e eventos para Livros --- //
-  initLivros() {
-    this.livroListComponent = document.querySelector("livro-list");
-    this.livroFormComponent = document.querySelector("livro-form");
-    this.renderLivros();
-    this.setupFormHandler();
-  }
-
-  renderLivros() {
-    if (this.livroListComponent) {
-      this.livroListComponent.render(this.listarLivros());
-      this.addEventListenersToLivroButtons();
-    }
-  }
-
-  addEventListenersToLivroButtons() {
-    document.querySelectorAll(".edit-livro-btn").forEach((button) => {
-      button.removeEventListener("click", this.handleEditLivroBound);
-      button.addEventListener("click", this.handleEditLivroBound);
-    });
-    document.querySelectorAll(".delete-livro-btn").forEach((button) => {
-      button.removeEventListener("click", this.handleDeleteLivroBound);
-      button.addEventListener("click", this.handleDeleteLivroBound);
-    });
-  }
-
-  handleEditLivro(event) {
-    const livroId = parseInt(event.target.dataset.id);
-    const livro = this.listarLivros().find((l) => l.id === livroId);
-    if (livro && this.livroFormComponent) {
-      const form = this.livroFormComponent.querySelector("#livro-form");
-      this.clearFormErrors(form);
-      form.titulo.value = livro.titulo;
-      form.autor.value = livro.autor;
-      form.editora.value = livro.editora || "";
-      form.data_publicacao.value = livro.data_publicacao || "";
-      form.isbn.value = livro.isbn || "";
-      form.paginas.value = livro.paginas || "";
-      form.capa.value = livro.capa || "";
-      form.idioma.value = livro.idioma || "";
-  form.genero.value = livro.genero || "";
-  if (form.tipo_obra) form.tipo_obra.value = livro.tipo_obra || "";
-      if (!form.querySelector("#livroId")) {
-        const hiddenIdInput = document.createElement("input");
-        hiddenIdInput.type = "hidden";
-        hiddenIdInput.id = "livroId";
-        form.appendChild(hiddenIdInput);
-      }
-      form.querySelector("#livroId").value = livro.id;
-      form.querySelector('button[type="submit"]').textContent =
-        "Atualizar Livro";
-    }
-  }
-
-  handleDeleteLivro(event) {
-    const livroId = parseInt(event.target.dataset.id);
-    this.removerLivro(livroId);
-    this.renderLivros();
-  }
-
-  setupFormHandler() {
-    if (this.livroFormComponent) {
-      const form = this.livroFormComponent.querySelector("#livro-form");
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
-        this.clearFormErrors(form);
-        let isValid = true;
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData.entries());
-        if (!data.titulo) {
-          this.displayFieldError(form.titulo, "Título é obrigatório.");
-          isValid = false;
-        }
-        if (!data.autor) {
-          this.displayFieldError(form.autor, "Autor é obrigatório.");
-          isValid = false;
-        }
-        if (
-          data.paginas &&
-          (isNaN(parseInt(data.paginas)) || parseInt(data.paginas) <= 0)
-        ) {
-          this.displayFieldError(
-            form.paginas,
-            "Número de páginas deve ser um número positivo."
-          );
-          isValid = false;
-        }
-        if (
-          data.genero &&
-          (isNaN(parseInt(data.genero)) || parseInt(data.genero) < 0)
-        ) {
-          this.displayFieldError(
-            form.genero,
-            "Gênero (ID) deve ser um número não negativo."
-          );
-          isValid = false;
-        }
-        if (!isValid) return;
-        const livroIdInput = form.querySelector("#livroId");
-        const livroId = livroIdInput ? parseInt(livroIdInput.value) : null;
-        const unidades = [{ unidade: 0, exemplares: 1 }];
-        const livroData = {
-          titulo: data.titulo,
-          autor: data.autor,
-          editora: data.editora,
-          data_publicacao: data.data_publicacao,
-          isbn: data.isbn,
-          paginas: parseInt(data.paginas) || 0,
-          capa: data.capa,
-          idioma: data.idioma,
-          genero: parseInt(data.genero) || 0,
-          tipo_obra: parseInt(data.tipo_obra) || 0,
-          unidades: unidades,
-        };
-        if (livroId) {
-          this.atualizarLivro(livroId, livroData);
-          if (livroIdInput) livroIdInput.remove();
-          form.querySelector('button[type="submit"]').textContent =
-            "Salvar Livro";
-        } else {
-          this.adicionarLivro(livroData);
-        }
-        form.reset();
-        this.renderLivros();
-      });
-    }
-    // Bind handlers for event listeners
-    this.handleEditLivroBound = this.handleEditLivro.bind(this);
-    this.handleDeleteLivroBound = this.handleDeleteLivro.bind(this);
-  }
-
-  clearFormErrors(form) {
-    form.querySelectorAll(".error-message").forEach((el) => el.remove());
-    form
-      .querySelectorAll("input.invalid")
-      .forEach((el) => el.classList.remove("invalid"));
-  }
-
-  displayFieldError(inputElement, message) {
-    inputElement.classList.add("invalid");
-    const errorElement = document.createElement("p");
-    errorElement.classList.add("error-message");
-    errorElement.style.color = "red";
-    errorElement.style.fontSize = "0.9em";
-    errorElement.textContent = message;
-    inputElement.parentNode.insertBefore(
-      errorElement,
-      inputElement.nextSibling
-    );
-  }
-
-  async showLivrosPage(callbacks = {}, filters = {}) {
+  /* ───────────────────────────────
+   * LIVROS — VIEWS
+   * ─────────────────────────────── */
+  async showLivrosPage(callbacks = {}) {
     this.view = this.view || new GestorView();
-    
-    // Garante que os dados iniciais estejam carregados
-    if (!this.initData.generos || this.initData.generos.length === 0) {
-      await this.fetchInitData();
-    }
-    
-    // Busca livros da API com filtros
-    await this.refreshLivrosList(filters);
-    
-    // Callback para filtros - recarrega apenas a lista
-    const onFilter = async (newFilters) => {
-      await this.refreshLivrosList(newFilters);
-    };
-    
-    this.view.renderLivrosPage(
-      this._livrosCache,
-      callbacks.onAdd,
-      callbacks.onEdit,
-      callbacks.onDelete,
-      callbacks.onView,
-      callbacks.onEditExemplares,
-      onFilter,
-      this.initData
-    );
-    
-    this._lastCallbacks = callbacks;
-  }
 
-  async refreshLivrosList(filters = {}) {
-    // Busca livros da API com filtros
-    let livros = await this.service.listarLivros(filters);
-    livros = livros.map((livro) => ({
-      ...livro,
-      unidades: (livro.unidades || []).map((u) => ({
-        unidade: this.initData.unidades.find((uni) => uni.id === u.unidade) || {
-          id: u.unidade,
-          nome: `Unidade ${u.unidade}`,
-        },
-        exemplares: u.exemplares,
-      })),
-      generoObj:
-        this.initData.generos.find((g) => g.id === (livro.genero?.id || livro.genero)) ||
-        { id: livro.genero, nome: `Gênero ${livro.genero}` },
-      tipo_obraObj:
-        this.initData.tipo_obras.find((t) => t.id === (livro.tipo_obra?.id || livro.tipo_obra)) ||
-        { id: livro.tipo_obra, nome: `Tipo ${livro.tipo_obra}` },
-    }));
-    this._livrosCache = livros;
-    
-    // Atualiza apenas a lista no componente existente
-    const livroListComponent = document.querySelector("livro-list");
-    if (livroListComponent) {
-      livroListComponent.livros = livros;
-    }
-  }
-
-  async editLivro(id, onBack = null) {
-    // Busca o livro por id na API
-    const livro = await this.service.getLivroById(id);
-    // Garante que os dados iniciais estejam carregados
-    if (!this.initData.unidades || this.initData.unidades.length === 0) {
-      await this.fetchInitData();
-    }
-    // Ajusta unidades do livro para o formato esperado pela view
-    livro.unidades = (livro.unidades || []).map((u) => ({
-      unidade: this.initData.unidades.find(
-        (uni) => uni.id === (u.unidade.id || u.unidade)
-      ) || {
-        id: u.unidade.id || u.unidade,
-        nome: `Unidade ${u.unidade.id || u.unidade}`,
-      },
-      exemplares: u.exemplares,
-    }));
-    await this.showLivroForm(livro, onBack);
-  }
-
-  async showLivroForm(livro = null, onBack = null) {
-    this.view = this.view || new GestorView();
     if (
-      !this.initData.generos ||
-      this.initData.generos.length === 0 ||
-      !this.initData.unidades ||
-      this.initData.unidades.length === 0
+      !this.initData.generos.length ||
+      !this.initData.unidades.length ||
+      !this.initData.tipo_obras.length
     ) {
       await this.fetchInitData();
     }
-    // Se for edição, garantir que as unidades do livro estejam no formato correto
-    if (livro && Array.isArray(livro.unidades)) {
-      livro.unidades = livro.unidades.map((u) => ({
-        unidade: this.initData.unidades.find(
-          (uni) => uni.id === (u.unidade.id || u.unidade)
-        ) || {
-          id: u.unidade.id || u.unidade,
-          nome: `Unidade ${u.unidade.id || u.unidade}`,
-        },
-        exemplares: u.exemplares,
-      }));
+
+    let livros = [];
+    try {
+      livros = await this.service.listarLivros();
+    } catch (e) {
+      console.error("Falha ao listar livros:", e);
+      alert("Não foi possível carregar a lista de livros agora.");
     }
+    livros = Array.isArray(livros) ? livros : [];
+
+    this._livrosCache = livros;
+    this._lastCallbacks = callbacks;
+
+    const onAdd =
+      callbacks.onAdd ||
+      (() => this.showLivroForm(null, () => this.showLivrosPage(callbacks)));
+
+    const onEdit =
+      callbacks.onEdit ||
+      (async (idOrObj) => {
+        try {
+          const id = typeof idOrObj === "object" ? Number(idOrObj?.id) : Number(idOrObj);
+          if (!id) return alert("ID do livro inválido.");
+          const livroApi = await this.service.getLivroById(id);
+          await this.showLivroForm(livroApi, () => this.showLivrosPage(callbacks));
+        } catch (err) {
+          console.error("Falha ao abrir edição do livro:", err);
+          alert("Não foi possível abrir o formulário de edição.");
+        }
+      });
+
+    const onDelete =
+      callbacks.onDelete ||
+      (async (livroId) => {
+        if (confirm("Deseja realmente remover este livro?")) {
+          await this.removerLivro(livroId);
+          await this.showLivrosPage(callbacks);
+        }
+      });
+
+    const onView = callbacks.onView || ((livroId) => this.showLivroDetalhe(livroId));
+
+    const onEditExemplares =
+      callbacks.onEditExemplares ||
+      ((livroId) =>
+        this.showLivroExemplaresForm(livroId, () => this.showLivrosPage(callbacks)));
+
+    this.view.renderLivrosPage(
+      livros,
+      onAdd,
+      onEdit,
+      onDelete,
+      onView,
+      onEditExemplares,
+      this.initData
+    );
+  }
+
+  async showLivroForm(idOrLivro = null, onBack = null) {
+    this.view = this.view || new GestorView();
+
+    if (
+      !this.initData.generos.length ||
+      !this.initData.unidades.length ||
+      !this.initData.tipo_obras.length
+    ) {
+      await this.fetchInitData();
+    }
+
+    let livro = null;
+    try {
+      if (idOrLivro && typeof idOrLivro === "object") {
+        livro = { ...idOrLivro };
+      } else if (idOrLivro != null) {
+        const id = Number(idOrLivro);
+        if (Number.isFinite(id) && id > 0) {
+          const fromApi = await this.service.getLivroById(id);
+          livro = fromApi || null;
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao obter livro para edição:", e);
+    }
+
     this.view.renderLivroForm(
-      async (form) => {
-        // Obter dados do livro base (edição) ou objeto vazio (criação)
-        const livroBase = form._livroSelecionado || {};
-        // Obter valores dos campos do form
-        const getValue = (name) =>
-          form.querySelector(`[name="${name}"]`)?.value || "";
-        const getNumber = (name) => {
-          const v = getValue(name);
-          return v === "" ? null : parseInt(v);
-        };
-        const data = {
-          titulo: getValue("titulo") || livroBase.titulo || "",
-          autor: getValue("autor") || livroBase.autor || "",
-          editora: getValue("editora") || livroBase.editora || "",
-          data_publicacao:
-            getValue("data_publicacao") || livroBase.data_publicacao || "",
-          isbn: getValue("isbn") || livroBase.isbn || "",
-          paginas: getNumber("paginas") ?? livroBase.paginas ?? 0,
-          capa: getValue("capa") || livroBase.capa || "",
-          idioma: getValue("idioma") || livroBase.idioma || "",
-          genero: getNumber("genero") ?? livroBase.genero ?? 0,
-          tipo_obra: getNumber("tipo_obra") ?? livroBase.tipo_obra ?? 0,
-        };
-        let isValid = true;
-        const displayFieldError = (input, msg) => {
-          if (this.view && typeof this.view.displayFieldError === "function") {
-            this.view.displayFieldError(input, msg);
-          } else if (input) {
-            input.classList.add("invalid");
-            const errorElement = document.createElement("p");
-            errorElement.classList.add("error-message");
-            errorElement.style.color = "red";
-            errorElement.style.fontSize = "0.9em";
-            errorElement.textContent = msg;
-            input.parentNode.insertBefore(errorElement, input.nextSibling);
+      async (formData) => {
+        try {
+          if (livro?.id) {
+            await this.service.atualizarLivro(Number(livro.id), formData);
+            alert("Livro atualizado com sucesso!");
+          } else {
+            await this.service.adicionarLivro(formData);
+            alert("Livro criado com sucesso!");
           }
-        };
-        // Validação usando os campos do form
-        if (!data.titulo) {
-          displayFieldError(
-            form.querySelector('[name="titulo"]'),
-            "Título é obrigatório."
-          );
-          isValid = false;
+          onBack ? onBack() : navigate("/livros");
+        } catch (err) {
+          console.error("Erro ao salvar livro:", err);
+          alert("Falha ao salvar o livro. Tente novamente.");
         }
-        if (!data.autor) {
-          displayFieldError(
-            form.querySelector('[name="autor"]'),
-            "Autor é obrigatório."
-          );
-          isValid = false;
-        }
-        if (data.paginas && (isNaN(data.paginas) || data.paginas <= 0)) {
-          displayFieldError(
-            form.querySelector('[name="paginas"]'),
-            "Número de páginas deve ser um número positivo."
-          );
-          isValid = false;
-        }
-        if (!data.genero) {
-          displayFieldError(
-            form.querySelector('[name="genero"]'),
-            "Gênero é obrigatório."
-          );
-          isValid = false;
-        }
-        if (!isValid) return;
-        // Unidades: usar sempre a lista de unidades adicionadas pelo usuário
-        const unidades =
-          form._livroUnidades && form._livroUnidades.length > 0
-            ? form._livroUnidades.map((u) => ({
-                unidade: u.unidade.id,
-                exemplares: u.exemplares,
-              }))
-            : [{ unidade: this.initData.unidades[0]?.id || 1, exemplares: 1 }];
-        const livroData = {
-          ...livroBase,
-          ...data,
-          unidades: unidades,
-        };
-        if (livroBase.id) {
-          await this.service.atualizarLivro(livroBase.id, livroData);
-        } else {
-          await this.service.adicionarLivro(livroData);
-        }
-        if (onBack) onBack();
-        else navigate("/livros");
-  },
-  livro,
-  onBack || (() => navigate("/livros")),
-  this.initData.generos,
-  this.initData.unidades,
-  this.initData.tipo_obras
+      },
+      livro,
+      onBack || (() => navigate("/livros")),
+      this.initData.generos,
+      this.initData.unidades,
+      this.initData.tipo_obras
     );
   }
 
   async showLivroExemplaresForm(id, onBack = null) {
-    this.view = this.view || new GestorView();
-    // Busca o livro por id na API
-    const livro = await this.service.getLivroById(id);
-    // Garante que as unidades estejam carregadas
-    if (!this.initData.unidades || this.initData.unidades.length === 0) {
-      await this.fetchInitData();
-    }
-    // Mapear unidades para objetos completos
-    livro.unidades = (livro.unidades || []).map((u) => ({
-      unidade: this.initData.unidades.find(
-        (uni) => uni.id === (u.unidade.id || u.unidade)
-      ) || {
-        id: u.unidade.id || u.unidade,
-        nome: `Unidade ${u.unidade.id || u.unidade}`,
-      },
-      exemplares: u.exemplares,
-    }));
-    this.view.renderLivroExemplaresForm(
-      livro,
-      async (unidadesAtualizadas) => {
-        if (this.service.atualizarLivroParcial) {
-          await this.service.atualizarLivroParcial(livro.id, {
-            unidades: unidadesAtualizadas.map((u) => ({
-              unidade: u.unidade.id,
-              exemplares: u.exemplares,
-            })),
-          });
-        }
+    const root = document.querySelector("#app-content");
+    if (!root) return;
 
-        if (onBack) onBack();
-        else navigate("/livros");
-      },
-      onBack || (() => navigate("/livros"))
-    );
-  }
+    root.innerHTML = `<livro-exemplares-page></livro-exemplares-page>`;
+    const el = root.querySelector("livro-exemplares-page");
 
-  async showUnidadesPage(callbacks = {}) {
-    this.view = this.view || new GestorView();
-    let unidades = await this.service.listarUnidades();
-    unidades = Array.isArray(unidades) ? unidades : [];
-    this._unidadesCache = unidades;
-    this._lastCallbacks = callbacks;
-    this.view.renderUnidadesPage(
-      unidades,
-      callbacks.onAdd || (() => {}),
-      callbacks.onEdit || (() => {}),
-      callbacks.onDelete || (() => {}),
-      callbacks.onView || (() => {})
-    );
-  }
-
-  async addUnidade(unidadeData) {
-    await this.service.adicionarUnidadeApi(unidadeData);
-    await this.showUnidadesPage(this._lastCallbacks);
-  }
-
-  async editUnidade(id, onBack = null) {
-    this.view = this.view || new GestorView();
-    // Buscar unidade por id na API
-    const unidade = await this.service.getUnidadeById(id);
-    this.view.renderUnidadeForm(
-      async (form) => {
-        // Montar objeto com os dados do form
-        const unidadeData = {
-          nome: form.nome.value,
-          endereco: form.endereco.value,
-          telefone: form.telefone.value,
-          email: form.email.value,
-          site: form.site.value,
-        };
-        await this.service.atualizarUnidadeApi(id, unidadeData);
-        if (onBack) onBack();
-        else navigate("/unidades");
-      },
-      unidade,
-      onBack || (() => navigate("/unidades"))
-    );
-  }
-
-  async deleteUnidade(id) {
-    await this.service.removerUnidadeApi(id);
-    // Remove da lista local se existir
-    if (this._unidadesCache) {
-      this._unidadesCache = this._unidadesCache.filter((u) => u.id !== id);
-      this.view.renderUnidadesPage(
-        this._unidadesCache,
-        this._lastCallbacks?.onAdd,
-        this._lastCallbacks?.onEdit,
-        this._lastCallbacks?.onDelete,
-        this._lastCallbacks?.onView
-      );
-    } else {
-      this.showUnidadesPage(this._lastCallbacks);
-    }
-  }
-
-  async deleteLivro(id) {
     try {
-      await this.removerLivro(id);
-      alert("Livro removido com sucesso!");
-      // Remove o livro da lista local e atualiza a view
-      if (this._livrosCache) {
-        this._livrosCache = this._livrosCache.filter((l) => l.id !== id);
-        this.view.renderLivrosPage(
-          this._livrosCache,
-          this._lastCallbacks?.onAdd,
-          this._lastCallbacks?.onEdit,
-          this._lastCallbacks?.onDelete,
-          this._lastCallbacks?.onView,
-          this._lastCallbacks?.onEditExemplares
-        );
-      } else {
-        await this.showLivrosPage(this._lastCallbacks);
-      }
-    } catch (err) {
-      alert("Erro ao remover livro: " + (err.message || err));
-    }
-  }
+      const livro = await this.service.getLivroById(id);
+      if (!this.initData.unidades.length) await this.fetchInitData();
 
-  async showUnidadeForm(unidade = null, onBack = null) {
-    this.view =
-      this.view || new (await import("./gestor-view.js")).GestorView();
-    this.view.renderUnidadeForm(
-      async (form) => {
-        // Validação simples
-        let isValid = true;
-        if (!form.nome.value) {
-          this.view.displayFieldError(form.nome, "Nome é obrigatório.");
-          isValid = false;
+      el.livroId = Number(id);
+      el.livro = livro;
+      el.unidadesDisponiveis = this.initData.unidades;
+
+      el.onCancelar = () => (onBack ? onBack() : navigate("/livros"));
+
+      el.onSalvar = async (payload) => {
+        try {
+          const unidades = Array.isArray(payload?.unidades) ? payload.unidades : [];
+          await this.service.atualizarLivroParcial(Number(id), { unidades });
+          alert("Exemplares atualizados com sucesso!");
+          onBack ? onBack() : navigate("/livros");
+        } catch (err) {
+          console.error(err);
+          alert("Erro ao salvar exemplares. Tente novamente.");
         }
-        if (!form.endereco.value) {
-          this.view.displayFieldError(form.endereco, "Endereço é obrigatório.");
-          isValid = false;
-        }
-        if (
-          form.email.value &&
-          !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.value)
-        ) {
-          this.view.displayFieldError(
-            form.email,
-            "Formato de e-mail inválido."
-          );
-          isValid = false;
-        }
-        if (!isValid) return;
-        const unidadeData = {
-          nome: form.nome.value,
-          endereco: form.endereco.value,
-          telefone: form.telefone.value,
-          email: form.email.value,
-          site: form.site.value,
-        };
-        if (unidade && unidade.id) {
-          await this.service.atualizarUnidadeApi(unidade.id, unidadeData);
-        } else {
-          await this.addUnidade(unidadeData);
-        }
-        if (onBack) onBack();
-        else navigate("/unidades");
-      },
-      unidade,
-      onBack || (() => navigate("/unidades"))
-    );
+      };
+    } catch (err) {
+      console.error("Erro ao carregar exemplares:", err);
+      root.innerHTML = `<div style="padding:1rem;color:#c00;">Falha ao carregar dados do livro.</div>`;
+    }
   }
 
   async showLivroDetalhe(id) {
-    this.view = this.view || new GestorView();
-    // Busca o livro por id na API
-    const livro = await this.service.getLivroById(id);
-    // Garante que os dados iniciais estejam carregados
-    if (
-      !this.initData.unidades ||
-      this.initData.unidades.length === 0 ||
-      !this.initData.generos ||
-      this.initData.generos.length === 0
-    ) {
-      await this.fetchInitData();
+    try {
+      const livro = await this.service.getLivroById(id);
+      this.view = this.view || new GestorView();
+      this.view.renderLivroDetalhe(livro, this.initData);
+    } catch (err) {
+      console.error("Erro ao carregar detalhe do livro:", err);
+      alert("Não foi possível abrir o detalhe do livro.");
     }
-    // Mapear unidades para objetos completos
-    livro.unidades = (livro.unidades || []).map((u) => ({
-      unidade: this.initData.unidades.find(
-        (uni) => uni.id === (u.unidade.id || u.unidade)
-      ) || {
-        id: u.unidade.id || u.unidade,
-        nome: `Unidade ${u.unidade.id || u.unidade}`,
+  }
+
+  /* ───────────────────────────────
+   * UNIDADES — CRUD
+   * ─────────────────────────────── */
+  async showUnidadesPage(callbacks = {}) {
+    this.view = this.view || new GestorView();
+
+    let unidades = [];
+    try {
+      unidades = await this.service.listarUnidades();
+    } catch (e) {
+      console.error("Falha ao listar unidades:", e);
+      alert("Não foi possível carregar a lista de unidades agora.");
+    }
+    unidades = Array.isArray(unidades) ? unidades : [];
+
+    this._unidadesCache = unidades;
+    this._lastCallbacks = callbacks;
+
+    const onAdd =
+      callbacks.onAdd ||
+      (() => this.showUnidadeForm(null, () => this.showUnidadesPage(callbacks)));
+
+    const onEdit =
+      callbacks.onEdit ||
+      ((idOrObj) => {
+        const id = typeof idOrObj === "object" ? idOrObj?.id : idOrObj;
+        this.showUnidadeForm(id, () => this.showUnidadesPage(callbacks));
+      });
+
+    const onDelete =
+      callbacks.onDelete ||
+      (async (id) => {
+        if (confirm("Deseja realmente remover esta unidade?")) {
+          await this.service.removerUnidade(id);
+          await this.showUnidadesPage(callbacks);
+        }
+      });
+
+    const onView = callbacks.onView || ((id) => this.showUnidadeDetalhe(id));
+
+    this.view.renderUnidadesPage(unidades, onAdd, onEdit, onDelete, onView);
+  }
+
+  async showUnidadeForm(id, onBack = null) {
+    const unidade = id ? await this.service.getUnidadeById(id) : null;
+
+    this.view = this.view || new GestorView();
+    this.view.renderUnidadeForm(
+      async (unidadeData) => {
+        try {
+          if (id) {
+            await this.service.atualizarUnidade(id, unidadeData);
+            alert("Unidade atualizada com sucesso!");
+          } else {
+            await this.service.adicionarUnidade(unidadeData);
+            alert("Unidade criada com sucesso!");
+          }
+          onBack ? onBack() : navigate("/unidades");
+        } catch (err) {
+          console.error("Erro ao salvar unidade:", err);
+          alert("Falha ao salvar a unidade. Tente novamente.");
+        }
       },
-      exemplares: u.exemplares,
-    }));
-    // Mapear gênero para objeto completo
-    livro.generoObj = this.initData.generos.find(
-      (g) => g.id === (livro.genero?.id || livro.genero)
-    ) || { id: livro.genero, nome: `Gênero ${livro.genero}` };
-    // Mapear tipo_obra para objeto completo
-    livro.tipo_obraObj = this.initData.tipo_obras.find(
-      (t) => t.id === (livro.tipo_obra?.id || livro.tipo_obra)
-    ) || { id: livro.tipo_obra, nome: `Tipo ${livro.tipo_obra}` };
-    this.view.renderLivroDetalhe(livro);
+      unidade,
+      onBack || (() => navigate("/unidades"))
+    );
+  }
+
+  async editUnidade(id, onBack = null) {
+    await this.showUnidadeForm(id, onBack);
+  }
+
+  async deleteUnidade(id) {
+    if (confirm("Deseja realmente remover esta unidade?")) {
+      await this.service.removerUnidade(id);
+      await this.showUnidadesPage(this._lastCallbacks || {});
+    }
   }
 
   async showUnidadeDetalhe(id) {
-    this.view = this.view || new GestorView();
-    const unidade = await this.service.getUnidadeById(id);
-    this.view.renderUnidadeDetalhe(unidade);
+    try {
+      const unidade = await this.service.getUnidadeById(id);
+      this.view = this.view || new GestorView();
+      this.view.renderUnidadeDetalhe(unidade);
+    } catch (err) {
+      console.error("Erro ao carregar detalhe da unidade:", err);
+      alert("Não foi possível abrir o detalhe da unidade.");
+    }
   }
 }

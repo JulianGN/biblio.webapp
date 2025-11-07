@@ -11,6 +11,8 @@ export async function authRoutes({ authController, authView, navigate }) {
     if (main) main.remove();
     const header = document.getElementById("main-header");
     if (header) header.remove();
+    const publicHeader = document.getElementById("public-header");
+    if (publicHeader) publicHeader.remove();
     const appContent = document.getElementById("app-content");
     if (appContent) appContent.remove();
     const app = document.querySelector("#app");

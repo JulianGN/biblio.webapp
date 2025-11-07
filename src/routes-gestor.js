@@ -1,8 +1,6 @@
 // 📁 src/routes/gestor-routes.js
 export async function gestorRoutes({ gestorController, gestorView, navigate }) {
   const path = window.location.pathname;
-
-  // Só processa rotas que começam com /livros ou /unidades
   if (!/^\/(livros|unidades)/.test(path)) {
     return false;
   }
@@ -12,6 +10,8 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
     if (main) main.remove();
     const header = document.getElementById("main-header");
     if (header) header.remove();
+    const publicHeader = document.getElementById("public-header");
+    if (publicHeader) publicHeader.remove();
     const appContent = document.getElementById("app-content");
     if (appContent) appContent.remove();
     const app = document.querySelector("#app");

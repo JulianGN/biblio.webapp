@@ -196,6 +196,64 @@ export class GestorController {
       onEditExemplares
     );
   }
+    
+  async showLivrosPage(callbacks = {}, filters = {}) {
+    this.view = this.view || new GestorView();
+    
+    // Garante que os dados iniciais estejam carregados
+    if (!this.initData.generos || this.initData.generos.length === 0) {
+      await this.fetchInitData();
+    }
+    
+    // Busca livros da API com filtros
+    await this.refreshLivrosList(filters);
+    
+    // Callback para filtros - recarrega apenas a lista
+    const onFilter = async (newFilters) => {
+      await this.refreshLivrosList(newFilters);
+    };
+    
+    this.view.renderLivrosPage(
+      this._livrosCache,
+      callbacks.onAdd,
+      callbacks.onEdit,
+      callbacks.onDelete,
+      callbacks.onView,
+      callbacks.onEditExemplares,
+      onFilter,
+      this.initData
+    );
+    
+    this._lastCallbacks = callbacks;
+  }
+
+  async refreshLivrosList(filters = {}) {
+    // Busca livros da API com filtros
+    let livros = await this.service.listarLivros(filters);
+    livros = livros.map((livro) => ({
+      ...livro,
+      unidades: (livro.unidades || []).map((u) => ({
+        unidade: this.initData.unidades.find((uni) => uni.id === u.unidade) || {
+          id: u.unidade,
+          nome: `Unidade ${u.unidade}`,
+        },
+        exemplares: u.exemplares,
+      })),
+      generoObj:
+        this.initData.generos.find((g) => g.id === (livro.genero?.id || livro.genero)) ||
+        { id: livro.genero, nome: `Gênero ${livro.genero}` },
+      tipo_obraObj:
+        this.initData.tipo_obras.find((t) => t.id === (livro.tipo_obra?.id || livro.tipo_obra)) ||
+        { id: livro.tipo_obra, nome: `Tipo ${livro.tipo_obra}` },
+    }));
+    this._livrosCache = livros;
+    
+    // Atualiza apenas a lista no componente existente
+    const livroListComponent = document.querySelector("livro-list");
+    if (livroListComponent) {
+      livroListComponent.livros = livros;
+    }
+  }
 
   /* ───────────────────────────────
    * LIVROS — FORMULÁRIO PRINCIPAL

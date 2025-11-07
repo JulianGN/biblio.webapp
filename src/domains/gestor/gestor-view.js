@@ -16,7 +16,7 @@ export class GestorView {
     console.log("Lista de Gestores:", gestores);
   }
 
-  renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares) {
+  renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares, onFilter = null, initData = {}) {
     const container =
       document.getElementById("livros-list") ||
       document.querySelector("#app-content");

@@ -120,7 +120,7 @@ class LivroList extends HTMLElement {
             </div>
             <div style="display:grid;justify-content:flex-end;gap:0.5rem;grid-template-columns:auto auto;">
               <button type="button" id="clear-filters" class="outline">Limpar Filtros</button>
-              <button type="submit" class="primary">Filtrar</button>
+              <button type="submit" id="apply-filters" class="primary">Filtrar</button>
             </div>
           </form>
         </div>
@@ -212,8 +212,9 @@ class LivroList extends HTMLElement {
     
     // Evento do formulário de filtros
     const filterForm = this.querySelector("#livro-filter-form");
-    if (filterForm) {
-      filterForm.onsubmit = (e) => {
+    const applyBtn = this.querySelector("#apply-filters");
+    if (applyBtn && filterForm) {
+      applyBtn.onclick = (e) => {
         e.preventDefault();
         const formData = new FormData(filterForm);
         const filters = {};
@@ -230,7 +231,6 @@ class LivroList extends HTMLElement {
       };
     }
     
-    // Botão limpar filtros
     const clearBtn = this.querySelector("#clear-filters");
     if (clearBtn) {
       clearBtn.onclick = (e) => {

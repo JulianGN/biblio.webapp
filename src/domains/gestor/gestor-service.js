@@ -1,20 +1,7 @@
-// 📁 src/controllers/gestor-service.js
 // Service do domínio Gestor
 // Lógica de negócio relacionada ao gestor
-
 import { Livro, Unidade } from "./gestor-model.js";
 import { BaseService } from "../base-service.js";
-
-const normalizeId = (v) => {
-  if (v == null) return null;
-  if (typeof v === "object" && "id" in v) return Number(v.id);
-  return Number(v);
-};
-
-const asNumberOrNull = (v) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-};
 
 export class GestorService extends BaseService {
   constructor() {
@@ -47,144 +34,120 @@ export class GestorService extends BaseService {
     return this.get(url);
   }
 
-  // Utilitário: normaliza propriedade que pode vir como objeto ou id
-  getObjectWithPropId(nomePropriedade, obj) {
-    const id = normalizeId(obj?.[nomePropriedade]);
-    return { [nomePropriedade]: id };
-  }
-
-  // Monta payload seguro para DRF
-  buildLivroPayload(livroData = {}) {
-    const getObjectId = (prop) => this.getObjectWithPropId(prop, livroData);
-
+  getObjectWithPropId(nomePropriedade, livroData) {
     return {
-      titulo: (livroData.titulo ?? "").trim(),
-      autor: (livroData.autor ?? "").trim(),
-      editora: (livroData.editora ?? "").trim(),
-      data_publicacao: livroData.data_publicacao || null,
-      isbn: (livroData.isbn ?? "").trim(),
-      paginas: asNumberOrNull(livroData.paginas),
-      capa:
-        livroData.capa && String(livroData.capa).toLowerCase() !== "null"
-          ? String(livroData.capa).trim()
-          : null,
-      idioma: (livroData.idioma ?? "").trim(),
-      ...getObjectId("genero"),
-      ...getObjectId("tipo_obra"),
-      unidades: (Array.isArray(livroData.unidades) ? livroData.unidades : []).map((u) => ({
-        unidade: normalizeId(u?.unidade),
-        exemplares: asNumberOrNull(u?.exemplares) ?? 1,
-      })),
+      [nomePropriedade]: typeof livroData[nomePropriedade] === "object"
+        ? livroData[nomePropriedade].id
+        : livroData[nomePropriedade]
     };
   }
 
-  // Cria livro (API)
   async adicionarLivro(livroData) {
-    const payload = this.buildLivroPayload(livroData);
+    const getObjectId = (nomePropriedade) => this.getObjectWithPropId(nomePropriedade, livroData);
+    const payload = {
+      ...livroData,
+      ...getObjectId("genero"),
+      ...getObjectId("tipo_obra"),
+      unidades: (livroData.unidades || []).map((u) => ({
+        ...this.getObjectWithPropId("unidade", u),
+        exemplares: u.exemplares,
+      })),
+    };
     return this.post("gestor/livros/", payload);
   }
 
-  // Busca livro por id (API)
   async getLivroById(id) {
     return this.get(`gestor/livros/${id}/`);
   }
 
-  // Atualiza livro (API)
   async atualizarLivro(livroId, livroData) {
-    const payload = this.buildLivroPayload(livroData);
-    return this.put(`gestor/livros/${livroId}/`, payload);
-  }
-
-  /**
-   * Atualização parcial de exemplares/unidades
-   * (reenvia o livro completo com novas unidades para compatibilidade DRF)
-   */
-  async atualizarLivroParcial(livroId, { unidades }) {
-    const livroAtual = await this.getLivroById(livroId);
-
+    const getObjectId = (nomePropriedade) => this.getObjectWithPropId(nomePropriedade, livroData);
     const payload = {
-      titulo: (livroAtual?.titulo ?? "").trim(),
-      autor: (livroAtual?.autor ?? "").trim(),
-      editora: (livroAtual?.editora ?? "").trim(),
-      data_publicacao: livroAtual?.data_publicacao || null,
-      isbn: (livroAtual?.isbn ?? "").trim(),
-      paginas: asNumberOrNull(livroAtual?.paginas),
-      capa:
-        livroAtual?.capa && String(livroAtual.capa).toLowerCase() !== "null"
-          ? String(livroAtual.capa).trim()
-          : null,
-      idioma: (livroAtual?.idioma ?? "").trim(),
-      genero: normalizeId(livroAtual?.genero),
-      tipo_obra: normalizeId(livroAtual?.tipo_obra),
-      unidades: (Array.isArray(unidades) ? unidades : []).map((u) => ({
-        unidade: normalizeId(u?.unidade),
-        exemplares: asNumberOrNull(u?.exemplares) ?? 1,
+      ...livroData,
+      ...getObjectId("genero"),
+      ...getObjectId("tipo_obra"),
+      unidades: (livroData.unidades || []).map((u) => ({
+        ...this.getObjectWithPropId("unidade", u),
+        exemplares: u.exemplares,
       })),
     };
-
-    // PUT completo para garantir compatibilidade com o DRF
     return this.put(`gestor/livros/${livroId}/`, payload);
   }
 
-  // Remove livro (API)
-  async removerLivro(livroId) {
-    return this.delete(`gestor/livros/${livroId}/`);
+  async atualizarLivroParcial(livroId, payload) {
+    return this.patch(`gestor/livros/${livroId}/`, payload);
   }
 
-  /* ============================
-   *          UNIDADES
-   * ============================ */
+  async removerLivro(livroId) {
+    const response = await fetch(this.baseUrl + `gestor/livros/${livroId}/`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || `Erro ${response.status}`);
+    }
+    return true;
+  }
 
-  // Lista todas as unidades (API)
+  // CRUD de Unidades
   async listarUnidades() {
     return this.get("gestor/unidades/");
   }
 
-  // === Métodos legados (mantidos por compatibilidade) ===
-  async adicionarUnidade(unidadeData) {
-    return this.adicionarUnidadeApi(unidadeData);
+  adicionarUnidade(unidadeData) {
+    const newId =
+      this.unidades.length > 0
+        ? Math.max(...this.unidades.map((u) => u.id)) + 1
+        : 1;
+    const unidade = new Unidade({ ...unidadeData, id: newId });
+    this.unidades.push(unidade);
+    return unidade;
   }
 
-  async atualizarUnidade(unidadeId, unidadeData) {
-    return this.atualizarUnidadeApi(unidadeId, unidadeData);
+  atualizarUnidade(unidadeId, unidadeData) {
+    const index = this.unidades.findIndex((u) => u.id === unidadeId);
+    if (index !== -1) {
+      this.unidades[index] = {
+        ...this.unidades[index],
+        ...unidadeData,
+        id: unidadeId,
+      };
+      return this.unidades[index];
+    }
+    return null;
   }
 
-  async removerUnidade(unidadeId) {
-    return this.removerUnidadeApi(unidadeId);
+  removerUnidade(unidadeId) {
+    this.unidades = this.unidades.filter((u) => u.id !== unidadeId);
   }
-  // ------------------------------------------------------
 
-  // Busca unidade por id (API)
   async getUnidadeById(id) {
     return this.get(`gestor/unidades/${id}/`);
   }
 
-  // Atualiza unidade (API)
   async atualizarUnidadeApi(unidadeId, unidadeData) {
-    const payload = {
-      nome: (unidadeData?.nome ?? "").trim(),
-      endereco: (unidadeData?.endereco ?? "").trim(),
-      telefone: (unidadeData?.telefone ?? "").trim(),
-      email: (unidadeData?.email ?? "").trim(),
-      site: (unidadeData?.site ?? "").trim(),
-    };
+    const payload = { ...unidadeData };
     return this.put(`gestor/unidades/${unidadeId}/`, payload);
   }
 
-  // Remove unidade (API)
   async removerUnidadeApi(unidadeId) {
-    return this.delete(`gestor/unidades/${unidadeId}/`);
+    const response = await fetch(
+      this.baseUrl + `gestor/unidades/${unidadeId}/`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || `Erro ${response.status}`);
+    }
+    return true;
   }
 
-  // Cria unidade (API)
   async adicionarUnidadeApi(unidadeData) {
-    const payload = {
-      nome: (unidadeData?.nome ?? "").trim(),
-      endereco: (unidadeData?.endereco ?? "").trim(),
-      telefone: (unidadeData?.telefone ?? "").trim(),
-      email: (unidadeData?.email ?? "").trim(),
-      site: (unidadeData?.site ?? "").trim(),
-    };
-    return this.post(`gestor/unidades/`, payload);
+    const payload = { ...unidadeData };
+    return this.post("gestor/unidades/", payload);
   }
 }

@@ -1,4 +1,3 @@
-// 📁 src/routes/auth-routes.js
 export async function authRoutes({ authController, authView, navigate }) {
   const path = window.location.pathname;
 
@@ -21,29 +20,32 @@ export async function authRoutes({ authController, authView, navigate }) {
 
   clearHeader();
   window.scrollTo(0, 0);
+  switch (path) {
+    case "/login":
+      document.body.insertAdjacentHTML(
+        "afterbegin",
+        `<main class="main-login"><div id="app-content" class="app-content"></div></main>`
+      );
 
-  // Monta um shell simples para a tela de login
-  document.body.insertAdjacentHTML(
-    "afterbegin",
-    `<main class="main-login"><div id="app-content" class="app-content"></div></main>`
-  );
+      // Renderiza o form e trata o submit
+      authView.renderLogin(async (username, password) => {
+        try {
+          // garante chamada assíncrona; ajuste se seu login retornar boolean/throw
+          await authController.login(username, password);
+          navigate("/livros"); // só após sucesso
+        } catch (err) {
+          console.error("Falha no login:", err);
+          // Se seu authView tiver método para mostrar erro, use-o:
+          if (typeof authView.showError === "function") {
+            authView.showError("Usuário ou senha inválidos.");
+          } else {
+            alert("Usuário ou senha inválidos.");
+          }
+        }
+      });
 
-  // Renderiza o form e trata o submit
-  authView.renderLogin(async (username, password) => {
-    try {
-      // garante chamada assíncrona; ajuste se seu login retornar boolean/throw
-      await authController.login(username, password);
-      navigate("/livros"); // só após sucesso
-    } catch (err) {
-      console.error("Falha no login:", err);
-      // Se seu authView tiver método para mostrar erro, use-o:
-      if (typeof authView.showError === "function") {
-        authView.showError("Usuário ou senha inválidos.");
-      } else {
-        alert("Usuário ou senha inválidos.");
-      }
-    }
-  });
-
-  return true;
+      return true;
+    default:
+      return false;
+  }
 }

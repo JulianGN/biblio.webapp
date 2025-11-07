@@ -44,12 +44,19 @@ export class BaseService {
   }
 
   async request(endpoint, { method = "GET", body, headers = {}, timeoutMs } = {}) {
+    // Inclui token JWT de autenticação se disponível
     const token =
-      (typeof localStorage !== "undefined" && localStorage.getItem("token")) ||
+      (typeof localStorage !== "undefined" && localStorage.getItem("authToken")) ||
       null;
 
-    const finalHeaders = { "Content-Type": "application/json", ...headers };
-    if (token) finalHeaders["Authorization"] = `Bearer ${token}`;
+    const finalHeaders = {
+      "Content-Type": "application/json",
+      ...headers,
+    };
+
+    if (token) {
+      finalHeaders["Authorization"] = `Bearer ${token}`;
+    }
 
     const url = this.buildUrl(endpoint);
 
@@ -70,6 +77,20 @@ export class BaseService {
         });
 
         clearTimeout(timerId);
+
+        // Tratamento de autenticação inválida ou expirada
+        if (res.status === 401) {
+          console.warn("Token inválido ou expirado - redirecionando para login");
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("isAuthenticated");
+          localStorage.removeItem("user");
+
+          if (window.navigate) {
+            window.navigate("/login");
+          }
+
+          throw new Error("Sessão expirada. Faça login novamente.");
+        }
 
         if (res.status === 204) return {};
 

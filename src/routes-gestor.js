@@ -1,10 +1,8 @@
-// 📁 src/routes/gestor-routes.js
 export async function gestorRoutes({ gestorController, gestorView, navigate }) {
   const path = window.location.pathname;
   if (!/^\/(livros|unidades)/.test(path)) {
     return false;
   }
-
   function clearHeader() {
     const main = document.querySelector("main");
     if (main) main.remove();
@@ -14,122 +12,114 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
     if (publicHeader) publicHeader.remove();
     const appContent = document.getElementById("app-content");
     if (appContent) appContent.remove();
-    const app = document.querySelector("#app");
-    if (app) app.innerHTML = "";
-  }
-
-  function renderShell() {
-    document.body.insertAdjacentHTML(
-      "afterbegin",
-      `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
-    );
+    document.querySelector("#app").innerHTML = "";
   }
 
   clearHeader();
   window.scrollTo(0, 0);
 
-  /* ─────────────────────────────────────────
-   *  Detalhes (antes do switch)
-   * ───────────────────────────────────────── */
-  if (/^\/livros\/[0-9]+\/detalhe\/?$/.test(path)) {
-    renderShell();
-    const id = parseInt(path.split("/")[2], 10);
-    await gestorController.showLivroDetalhe(id);
+  if (/^\/livros\/[0-9]+\/detalhe$/.test(path)) {
+    document.body.insertAdjacentHTML(
+      "afterbegin",
+      `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+    );
+    const id = parseInt(path.split("/")[2]);
+    gestorController.showLivroDetalhe(id);
+    return true;
+  }
+  if (/^\/unidades\/[0-9]+\/detalhe$/.test(path)) {
+    document.body.insertAdjacentHTML(
+      "afterbegin",
+      `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+    );
+    const id = parseInt(path.split("/")[2]);
+    gestorController.showUnidadeDetalhe(id);
     return true;
   }
 
-  if (/^\/unidades\/[0-9]+\/detalhe\/?$/.test(path)) {
-    renderShell();
-    const id = parseInt(path.split("/")[2], 10);
-    await gestorController.showUnidadeDetalhe(id);
+  if (/^\/livros\/[0-9]+$/.test(path)) {
+    document.body.insertAdjacentHTML(
+      "afterbegin",
+      `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+    );
+    const id = parseInt(path.split("/")[2]);
+    gestorController.editLivro(id, () => navigate("/livros"));
     return true;
   }
-
-  /* ─────────────────────────────────────────
-   *  Edição dinâmica
-   * ───────────────────────────────────────── */
-
-  // ✅ /livros/:id/editar  → abrir form de edição com ID na URL
-  if (/^\/livros\/[0-9]+\/editar\/?$/.test(path)) {
-    renderShell();
-    const id = parseInt(path.split("/")[2], 10);
-    await gestorController.showLivroForm(id, () => navigate("/livros"));
-    return true;
-  }
-
-  // Fallback: /livros/:id  → também abre o form (caso alguém acesse direto)
-  if (/^\/livros\/[0-9]+\/?$/.test(path)) {
-    renderShell();
-    const id = parseInt(path.split("/")[2], 10);
-    await gestorController.showLivroForm(id, () => navigate("/livros"));
-    return true;
-  }
-
-  // /unidades/:id  → editar unidade
-  if (/^\/unidades\/[0-9]+\/?$/.test(path)) {
-    renderShell();
-    const id = parseInt(path.split("/")[2], 10);
+  if (/^\/unidades\/[0-9]+$/.test(path)) {
+    document.body.insertAdjacentHTML(
+      "afterbegin",
+      `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+    );
+    const id = parseInt(path.split("/")[2]);
     await gestorController.editUnidade(id, () => navigate("/unidades"));
     return true;
   }
 
-  // /livros/:id/exemplares  → form de exemplares por unidade
-  if (/^\/livros\/[0-9]+\/exemplares\/?$/.test(path)) {
-    renderShell();
-    const id = parseInt(path.split("/")[2], 10);
-    await gestorController.showLivroExemplaresForm(id, () => navigate("/livros"));
+  if (/^\/livros\/[0-9]+\/exemplares$/.test(path)) {
+    document.body.insertAdjacentHTML(
+      "afterbegin",
+      `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+    );
+    const id = parseInt(path.split("/")[2]);
+    await gestorController.showLivroExemplaresForm(id, () =>
+      navigate("/livros")
+    );
     return true;
   }
 
-  /* ─────────────────────────────────────────
-   *  Rotas principais
-   * ───────────────────────────────────────── */
   switch (path) {
-    case "/livros": {
-      renderShell();
-      document.querySelector("#app-content").innerHTML = `<div id="livros-list"></div>`;
-
-      // ⚠️ Mudança: agora NAVEGA para /livros/:id/editar para o form captar o ID da URL
-      await gestorController.showLivrosPage({
+    case "/livros":
+      document.body.insertAdjacentHTML(
+        "afterbegin",
+        `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+      );
+      document.querySelector(
+        "#app-content"
+      ).innerHTML = `<div id="livros-list"></div>`;
+      gestorController.showLivrosPage({
         onAdd: () => navigate("/livros/novo"),
-        onEdit: (id) => navigate(`/livros/${id}/editar`),          // ← aqui!
-        onDelete: async (id) => {
-          await gestorController.removerLivro(id);
-          await gestorController.showLivrosPage({}); // re-render da lista
+        onEdit: (id) => navigate(`/livros/${id}`),
+        onDelete: (id) => {
+          gestorController.deleteLivro(id);
+          navigate("/livros");
         },
         onView: (id) => navigate(`/livros/${id}/detalhe`),
         onEditExemplares: (id) => navigate(`/livros/${id}/exemplares`),
       });
       return true;
-    }
-
-    case "/livros/novo": {
-      renderShell();
-      await gestorController.showLivroForm(null, () => navigate("/livros"));
+    case "/livros/novo":
+      document.body.insertAdjacentHTML(
+        "afterbegin",
+        `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+      );
+      gestorController.showLivroForm(null, () => navigate("/livros"));
       return true;
-    }
-
-    case "/unidades": {
-      renderShell();
-      document.querySelector("#app-content").innerHTML = `<div id="unidades-list"></div>`;
+    case "/unidades":
+      document.body.insertAdjacentHTML(
+        "afterbegin",
+        `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+      );
+      document.querySelector(
+        "#app-content"
+      ).innerHTML = `<div id="unidades-list"></div>`;
       await gestorController.showUnidadesPage({
-        onAdd: () => gestorController.editUnidade(null, () => navigate("/unidades")),
-        onEdit: (id) => gestorController.editUnidade(id, () => navigate("/unidades")),
-        onDelete: async (id) => {
-          await gestorController.deleteUnidade(id);
-          await gestorController.showUnidadesPage({});
+        onAdd: () => navigate("/unidades/novo"),
+        onEdit: (id) => navigate(`/unidades/${id}`),
+        onDelete: (id) => {
+          gestorController.deleteUnidade(id);
+          navigate("/unidades");
         },
         onView: (id) => navigate(`/unidades/${id}/detalhe`),
       });
       return true;
-    }
-
-    case "/unidades/novo": {
-      renderShell();
-      await gestorController.editUnidade(null, () => navigate("/unidades"));
+    case "/unidades/novo":
+      document.body.insertAdjacentHTML(
+        "afterbegin",
+        `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+      );
+      gestorController.showUnidadeForm(null, () => navigate("/unidades"));
       return true;
-    }
-
     default:
       return false;
   }

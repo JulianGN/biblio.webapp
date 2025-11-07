@@ -1,20 +1,16 @@
-// 📁 src/components/livro/livro-list.js
 import "./livro-list.css";
-import { BaseService } from "../../domains/base-service";
 
-const api = new BaseService();
-
+// Web Component para a lista de livros
 class LivroList extends HTMLElement {
   constructor() {
     super();
     this._search = "";
-    this._livros = [];
+    this._filters = {};
   }
 
   set livros(livros) {
-    this._livros = Array.isArray(livros) ? livros : [];
+    this._livros = livros;
     this.updateTable();
-    this._filters = {};
   }
 
   get livros() {
@@ -60,6 +56,7 @@ class LivroList extends HTMLElement {
     this.render();
   }
 
+  // Método para renderizar a lista de livros
   render() {
     const generos = this.initData.generos || [];
     const tipo_obras = this.initData.tipo_obras || [];
@@ -120,7 +117,7 @@ class LivroList extends HTMLElement {
             </div>
             <div style="display:grid;justify-content:flex-end;gap:0.5rem;grid-template-columns:auto auto;">
               <button type="button" id="clear-filters" class="outline">Limpar Filtros</button>
-              <button type="submit" id="apply-filters" class="primary">Filtrar</button>
+              <button type="submit" class="primary">Filtrar</button>
             </div>
           </form>
         </div>
@@ -162,10 +159,10 @@ class LivroList extends HTMLElement {
         </table>
       </div>
     `;
-
+    // Renderiza apenas o tbody separadamente
     const tbody = this.querySelector("#livros-tbody");
     if (tbody) {
-      let livros = this.livros; 
+      let livros = this.livros; // Use this.livros instead of this.filteredLivros
       if (livros.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#888;">Nenhum livro encontrado. Tente ajustar os filtros ou adicione um novo livro.</td></tr>`;
       } else {
@@ -212,9 +209,8 @@ class LivroList extends HTMLElement {
     
     // Evento do formulário de filtros
     const filterForm = this.querySelector("#livro-filter-form");
-    const applyBtn = this.querySelector("#apply-filters");
-    if (applyBtn && filterForm) {
-      applyBtn.onclick = (e) => {
+    if (filterForm) {
+      filterForm.onsubmit = (e) => {
         e.preventDefault();
         const formData = new FormData(filterForm);
         const filters = {};
@@ -231,6 +227,7 @@ class LivroList extends HTMLElement {
       };
     }
     
+    // Botão limpar filtros
     const clearBtn = this.querySelector("#clear-filters");
     if (clearBtn) {
       clearBtn.onclick = (e) => {
@@ -283,45 +280,32 @@ class LivroList extends HTMLElement {
     this.querySelectorAll(".edit-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
-        const id = Number(btn.dataset.id);
-        // NÃO navega → chama o callback direto
-        if (this._onEdit) this._onEdit(id);
-        else if (window.gestorController?.showLivroForm) window.gestorController.showLivroForm({ id });
+        if (this._onEdit) this._onEdit(parseInt(btn.dataset.id));
       };
     });
-
     this.querySelectorAll(".delete-livro-icon").forEach((btn) => {
-      btn.onclick = async (e) => {
+      btn.onclick = (e) => {
         e.preventDefault();
-        const id = Number(btn.dataset.id);
-        if (!window.confirm("Tem certeza que deseja excluir este livro?")) return;
-        if (this._onDelete) return this._onDelete(id);
-        try {
-          await api.delete(`/gestor/livros/${id}/`);
-          this._livros = (this._livros || []).filter((l) => l.id !== id);
-          this._rerenderTbody();
-        } catch (err) {
-          console.error(err);
-          alert(err?.response?.data?.message || err?.message || "Erro ao excluir o livro.");
+        if (window.confirm("Tem certeza que deseja excluir este livro?")) {
+          if (this._onDelete) this._onDelete(parseInt(btn.dataset.id));
         }
       };
     });
-
     this.querySelectorAll(".view-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
-        const id = Number(btn.dataset.id);
-        if (this._onView) this._onView(id);
-        else if (window.navigate) window.navigate(`/livros/${id}/detalhe`);
+        if (window.navigate)
+          window.navigate(`/livros/${btn.dataset.id}/detalhe`);
+        else if (this._onView) this._onView(parseInt(btn.dataset.id));
       };
     });
-
     this.querySelectorAll(".edit-exemplares-livro-icon").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
-        const id = Number(btn.dataset.id);
-        if (this._onEditExemplares) this._onEditExemplares(id);
-        else if (window.navigate) window.navigate(`/livros/${id}/exemplares`);
+        if (window.navigate)
+          window.navigate(`/livros/${btn.dataset.id}/exemplares`);
+        else if (this._onEditExemplares)
+          this._onEditExemplares(parseInt(btn.dataset.id));
       };
     });
   }

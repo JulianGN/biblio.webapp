@@ -29,6 +29,7 @@ export async function authRoutes({ authController, authView, navigate }) {
 
       // Renderiza o form e trata o submit
       authView.renderLogin(async (username, password) => {
+        authView.setLoading?.(true);
         try {
           // garante chamada assíncrona; ajuste se seu login retornar boolean/throw
           await authController.login(username, password);
@@ -37,10 +38,14 @@ export async function authRoutes({ authController, authView, navigate }) {
           console.error("Falha no login:", err);
           // Se seu authView tiver método para mostrar erro, use-o:
           if (typeof authView.showError === "function") {
-            authView.showError("Usuário ou senha inválidos.");
+            authView.showError(
+              "Não foi possível entrar. Revise usuário/senha e tente novamente."
+            );
           } else {
-            alert("Usuário ou senha inválidos.");
+            alert("Não foi possível entrar. Revise usuário/senha e tente novamente.");
           }
+        } finally {
+          authView.setLoading?.(false);
         }
       });
 

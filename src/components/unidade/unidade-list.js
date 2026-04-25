@@ -96,10 +96,19 @@ class UnidadeList extends HTMLElement {
       };
     });
     this.querySelectorAll(".delete-unidade-icon").forEach((btn) => {
-      btn.onclick = (e) => {
+      btn.onclick = async (e) => {
         e.preventDefault();
         if (window.confirm("Tem certeza que deseja excluir esta unidade?")) {
-          if (this._onDelete) this._onDelete(parseInt(btn.dataset.id));
+          if (!this._onDelete) return;
+          const originalHtml = btn.innerHTML;
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+          try {
+            await Promise.resolve(this._onDelete(parseInt(btn.dataset.id)));
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+          }
         }
       };
     });

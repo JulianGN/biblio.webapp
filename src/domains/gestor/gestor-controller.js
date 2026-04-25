@@ -5,6 +5,7 @@
 import { GestorService } from "./gestor-service.js";
 import { GestorView } from "./gestor-view.js";
 import { GestorInitService } from "./gestor-init-service.js";
+import { extractFriendlyError, showToast } from "../../utils/feedback.js";
 
 // Função de navegação SPA
 const navigate =
@@ -40,7 +41,10 @@ export class GestorController {
       };
     } catch (err) {
       console.error("Erro ao carregar initData:", err);
-      alert("Não foi possível carregar listas iniciais (gêneros/unidades/tipos).");
+      showToast(
+        "Não foi possível carregar listas iniciais (gêneros, unidades e tipos).",
+        "error"
+      );
     }
   }
 
@@ -69,6 +73,7 @@ export class GestorController {
    * ─────────────────────────────── */
   async showLivrosPage(callbacks = {}) {
     this.view = this.view || new GestorView();
+    this.view.showLoading("Carregando lista de livros...");
 
     if (
       !this.initData.generos.length ||
@@ -83,7 +88,7 @@ export class GestorController {
       livros = await this.service.listarLivros();
     } catch (e) {
       console.error("Falha ao listar livros:", e);
-      alert("Não foi possível carregar a lista de livros agora.");
+      showToast("Não foi possível carregar a lista de livros agora.", "error");
     }
     livros = Array.isArray(livros) ? livros : [];
 
@@ -99,12 +104,15 @@ export class GestorController {
       (async (idOrObj) => {
         try {
           const id = typeof idOrObj === "object" ? Number(idOrObj?.id) : Number(idOrObj);
-          if (!id) return alert("ID do livro inválido.");
+          if (!id) {
+            showToast("ID do livro inválido.", "error");
+            return;
+          }
           const livroApi = await this.service.getLivroById(id);
           await this.showLivroForm(livroApi, () => this.showLivrosPage(callbacks));
         } catch (err) {
           console.error("Falha ao abrir edição do livro:", err);
-          alert("Não foi possível abrir o formulário de edição.");
+          showToast("Não foi possível abrir o formulário de edição.", "error");
         }
       });
 
@@ -166,15 +174,15 @@ export class GestorController {
         try {
           if (livro?.id) {
             await this.service.atualizarLivro(Number(livro.id), formData);
-            alert("Livro atualizado com sucesso!");
+            showToast("Livro atualizado com sucesso!", "success");
           } else {
             await this.service.adicionarLivro(formData);
-            alert("Livro criado com sucesso!");
+            showToast("Livro criado com sucesso!", "success");
           }
           onBack ? onBack() : navigate("/livros");
         } catch (err) {
           console.error("Erro ao salvar livro:", err);
-          alert("Falha ao salvar o livro. Tente novamente.");
+          throw new Error(extractFriendlyError(err, "Falha ao salvar o livro."));
         }
       },
       livro,
@@ -206,16 +214,16 @@ export class GestorController {
         try {
           const unidades = Array.isArray(payload?.unidades) ? payload.unidades : [];
           await this.service.atualizarLivroParcial(Number(id), { unidades });
-          alert("Exemplares atualizados com sucesso!");
+          showToast("Exemplares atualizados com sucesso!", "success");
           onBack ? onBack() : navigate("/livros");
         } catch (err) {
           console.error(err);
-          alert("Erro ao salvar exemplares. Tente novamente.");
+          showToast(extractFriendlyError(err, "Erro ao salvar exemplares."), "error");
         }
       };
     } catch (err) {
       console.error("Erro ao carregar exemplares:", err);
-      root.innerHTML = `<div style="padding:1rem;color:#c00;">Falha ao carregar dados do livro.</div>`;
+      root.innerHTML = `<div class="app-loading-panel">Falha ao carregar dados do livro.</div>`;
     }
   }
 
@@ -226,7 +234,7 @@ export class GestorController {
       this.view.renderLivroDetalhe(livro, this.initData);
     } catch (err) {
       console.error("Erro ao carregar detalhe do livro:", err);
-      alert("Não foi possível abrir o detalhe do livro.");
+      showToast("Não foi possível abrir o detalhe do livro.", "error");
     }
   }
 
@@ -235,13 +243,14 @@ export class GestorController {
    * ─────────────────────────────── */
   async showUnidadesPage(callbacks = {}) {
     this.view = this.view || new GestorView();
+    this.view.showLoading("Carregando lista de unidades...");
 
     let unidades = [];
     try {
       unidades = await this.service.listarUnidades();
     } catch (e) {
       console.error("Falha ao listar unidades:", e);
-      alert("Não foi possível carregar a lista de unidades agora.");
+      showToast("Não foi possível carregar a lista de unidades agora.", "error");
     }
     unidades = Array.isArray(unidades) ? unidades : [];
 
@@ -282,15 +291,15 @@ export class GestorController {
         try {
           if (id) {
             await this.service.atualizarUnidade(id, unidadeData);
-            alert("Unidade atualizada com sucesso!");
+            showToast("Unidade atualizada com sucesso!", "success");
           } else {
             await this.service.adicionarUnidade(unidadeData);
-            alert("Unidade criada com sucesso!");
+            showToast("Unidade criada com sucesso!", "success");
           }
           onBack ? onBack() : navigate("/unidades");
         } catch (err) {
           console.error("Erro ao salvar unidade:", err);
-          alert("Falha ao salvar a unidade. Tente novamente.");
+          throw new Error(extractFriendlyError(err, "Falha ao salvar a unidade."));
         }
       },
       unidade,
@@ -316,7 +325,7 @@ export class GestorController {
       this.view.renderUnidadeDetalhe(unidade);
     } catch (err) {
       console.error("Erro ao carregar detalhe da unidade:", err);
-      alert("Não foi possível abrir o detalhe da unidade.");
+      showToast("Não foi possível abrir o detalhe da unidade.", "error");
     }
   }
 }

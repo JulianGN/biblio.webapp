@@ -13,6 +13,117 @@
     --color-accent1: #FBCDCD;
     --color-accent2: #F5CA6E;
     --color-accent3: #F3A04E;
+
+    --color-feedback-neutral: #475569;
+    --color-feedback-success: #0F766E;
+    --color-feedback-error: #B91C1C;
+    --color-feedback-loading: #1D4ED8;
+
+    --color-surface-muted: #F1F5F9;
+    --color-border-subtle: #CBD5E1;
+}
+
+.app-loading-panel {
+    padding: 1rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-muted);
+    border-radius: 8px;
+    color: var(--color-feedback-loading);
+}
+
+.app-global-loading {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--color-background) 84%, transparent);
+    z-index: 1200;
+}
+
+.app-global-loading[hidden] {
+    display: none;
+}
+
+.app-global-loading-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 10px;
+    background: var(--color-surface-muted);
+    color: var(--color-feedback-loading);
+    font-weight: 600;
+}
+
+.app-global-loading-spinner {
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    border: 2px solid var(--color-border-subtle);
+    border-top-color: var(--color-feedback-loading);
+    animation: app-global-spin 0.9s linear infinite;
+}
+
+@keyframes app-global-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.app-inline-feedback {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.85rem;
+    min-height: 1.1rem;
+    color: var(--color-feedback-neutral);
+}
+
+.app-inline-feedback.is-error {
+    color: var(--color-feedback-error);
+}
+
+.app-inline-feedback.is-success {
+    color: var(--color-feedback-success);
+}
+
+.app-inline-feedback.is-loading {
+    color: var(--color-feedback-loading);
+}
+
+.app-toast {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 1000;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    color: var(--color-background);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 160ms ease, transform 160ms ease;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+}
+
+.app-toast.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.app-toast-info {
+    background: var(--color-feedback-loading);
+}
+
+.app-toast-success {
+    background: var(--color-feedback-success);
+}
+
+.app-toast-error {
+    background: var(--color-feedback-error);
 }
 
 body>main:not(.main-login) {
@@ -55,7 +166,7 @@ body>main:not(.main-login) {
     max-width: 420px;
     margin: auto;
     text-align: center;
-    background: #fffdf9;
+    background: var(--color-background);
     padding: 1rem;
 }
 

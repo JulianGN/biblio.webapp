@@ -32,6 +32,7 @@ class UnidadeForm extends HTMLElement {
           <label for="site">Site:</label>
           <input type="url" id="site" name="site" />
         </div>
+        <small id="unidade-form-feedback" class="app-inline-feedback" aria-live="polite"></small>
         <div class="unidade-form-footer">
           <button type="button" id="cancelar-unidade-btn" class="outline">Cancelar</button>
           <button type="submit">Salvar Unidade</button>

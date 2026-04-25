@@ -2,6 +2,11 @@
 // View do domínio Gestor
 // Responsável por renderizar e manipular o DOM relacionado ao gestor
 
+import {
+  validateLivroFormData,
+  validateUnidadeFormData,
+} from "../../utils/form-validation.js";
+
 export class GestorView {
   showLoading(message = "Carregando...") {
     const body = document.body;
@@ -194,8 +199,22 @@ export class GestorView {
         unidades: livroFormEl._unidadesSelecionadas || [] 
       };
 
+      const validation = validateLivroFormData(formData);
+      if (!validation.isValid) {
+        if (feedbackEl) {
+          feedbackEl.textContent = validation.firstError;
+          feedbackEl.classList.remove("is-loading", "is-success");
+          feedbackEl.classList.add("is-error");
+        }
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = originalText || "Salvar Livro";
+        }
+        return;
+      }
+
       // Passando o objeto formData extraído em vez do elemento DOM
-      Promise.resolve(onSubmit(formData))
+      Promise.resolve(onSubmit(validation.cleanData))
         .catch((err) => {
           if (feedbackEl) {
             feedbackEl.textContent =
@@ -262,7 +281,21 @@ export class GestorView {
           site: form.querySelector('input[name="site"]')?.value || form.site?.value
         };
 
-        Promise.resolve(typeof onSubmit === "function" ? onSubmit(formData) : null)
+        const validation = validateUnidadeFormData(formData);
+        if (!validation.isValid) {
+          if (feedbackEl) {
+            feedbackEl.textContent = validation.firstError;
+            feedbackEl.classList.remove("is-loading", "is-success");
+            feedbackEl.classList.add("is-error");
+          }
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalText || "Salvar Unidade";
+          }
+          return;
+        }
+
+        Promise.resolve(typeof onSubmit === "function" ? onSubmit(validation.cleanData) : null)
           .catch((err) => {
             if (feedbackEl) {
               feedbackEl.textContent =
@@ -302,6 +335,33 @@ export class GestorView {
     unidadeList.onEdit = onEdit;
     unidadeList.onDelete = onDelete;
     unidadeList.onView = onView;
+  }
+
+  renderUsuariosPage(usuarios, onAdd, onEdit, onDelete, onFilter = null) {
+    this.hideLoading();
+    const container =
+      document.getElementById("usuarios-list") ||
+      document.querySelector("#app-content");
+    container.innerHTML = /* html */ `
+      <usuario-list></usuario-list>
+    `;
+    const usuarioList = container.querySelector("usuario-list");
+    usuarioList.usuarios = usuarios;
+    usuarioList.onAdd = onAdd;
+    usuarioList.onEdit = onEdit;
+    usuarioList.onDelete = onDelete;
+    usuarioList.onFilter = onFilter;
+  }
+
+  renderUsuarioForm(onSubmit, usuario = null, onBack = null) {
+    this.hideLoading();
+    document.querySelector("#app-content").innerHTML = /* html */ `
+      <usuario-form ${usuario ? "edit" : ""}></usuario-form>
+    `;
+    const usuarioForm = document.querySelector("usuario-form");
+    usuarioForm.usuario = usuario;
+    usuarioForm.onSubmit = onSubmit;
+    usuarioForm.onBack = onBack;
   }
 
   renderLivroDetalhe(livro) {

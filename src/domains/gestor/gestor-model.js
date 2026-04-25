@@ -41,3 +41,15 @@ export class Unidade {
     this.site = site;
   }
 }
+
+export class Usuario {
+  constructor({ id, nome, email, telefone, documento, ativo, observacoes }) {
+    this.id = id;
+    this.nome = nome;
+    this.email = email;
+    this.telefone = telefone;
+    this.documento = documento;
+    this.ativo = ativo;
+    this.observacoes = observacoes;
+  }
+}

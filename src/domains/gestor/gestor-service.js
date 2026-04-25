@@ -1,6 +1,6 @@
 // Service do domínio Gestor
 // Lógica de negócio relacionada ao gestor
-import { Livro, Unidade } from "./gestor-model.js";
+import { Livro, Unidade, Usuario } from "./gestor-model.js";
 import { BaseService } from "../base-service.js";
 
 export class GestorService extends BaseService {
@@ -157,5 +157,61 @@ export class GestorService extends BaseService {
   async adicionarUnidadeApi(unidadeData) {
     const payload = { ...unidadeData };
     return this.post("gestor/unidades/", payload);
+  }
+
+  // CRUD de Usuários
+  async listarUsuarios(filters = {}) {
+    let url = "gestor/usuarios/";
+    const queryParams = new URLSearchParams();
+
+    // Usar 'search' para nome, email e documento (SearchFilter do DRF)
+    const searchTerms = [];
+    if (filters.nome) searchTerms.push(filters.nome);
+    if (filters.email) searchTerms.push(filters.email);
+    if (filters.documento) searchTerms.push(filters.documento);
+    
+    if (searchTerms.length > 0) {
+      queryParams.append("search", searchTerms.join(" "));
+    }
+
+    // Filtro específico para ativo
+    if (filters.ativo !== undefined && filters.ativo !== null && filters.ativo !== "") {
+      queryParams.append("ativo", String(filters.ativo));
+    }
+
+    if (queryParams.toString()) {
+      url += "?" + queryParams.toString();
+    }
+
+    return this.get(url);
+  }
+
+  adicionarUsuario(usuarioData) {
+    const payload = new Usuario({ ...usuarioData });
+    return this.post("gestor/usuarios/", payload);
+  }
+
+  async getUsuarioById(id) {
+    return this.get(`gestor/usuarios/${id}/`);
+  }
+
+  async atualizarUsuario(usuarioId, usuarioData) {
+    const payload = {
+      ...usuarioData,
+      ativo: Boolean(usuarioData.ativo),
+    };
+    return this.put(`gestor/usuarios/${usuarioId}/`, payload);
+  }
+
+  async removerUsuario(usuarioId) {
+    const response = await fetch(this.baseUrl + `gestor/usuarios/${usuarioId}/`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || `Erro ${response.status}`);
+    }
+    return true;
   }
 }

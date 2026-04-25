@@ -28,6 +28,7 @@ export class GestorController {
     // caches
     this._livrosCache = null;
     this._unidadesCache = null;
+    this._usuariosCache = null;
     this._lastCallbacks = null;
   }
 
@@ -327,5 +328,99 @@ export class GestorController {
       console.error("Erro ao carregar detalhe da unidade:", err);
       showToast("Não foi possível abrir o detalhe da unidade.", "error");
     }
+  }
+
+  async deleteUsuario(id) {
+    await this.service.removerUsuario(id);
+    await this.showUsuariosPage(this._lastCallbacks || {});
+  }
+
+  /* ───────────────────────────────
+   * USUÁRIOS — CRUD
+   * ─────────────────────────────── */
+  async showUsuariosPage(callbacks = {}) {
+    this.view = this.view || new GestorView();
+    this.view.showLoading("Carregando lista de usuários...");
+
+    let usuarios = [];
+    try {
+      usuarios = await this.service.listarUsuarios();
+    } catch (e) {
+      console.error("Falha ao listar usuários:", e);
+      showToast("Não foi possível carregar a lista de usuários agora.", "error");
+    }
+    usuarios = Array.isArray(usuarios) ? usuarios : [];
+
+    this._usuariosCache = usuarios;
+    this._lastCallbacks = callbacks;
+
+    const onAdd =
+      callbacks.onAdd ||
+      (() => this.showUsuarioForm(null, () => this.showUsuariosPage(callbacks)));
+
+    const onEdit =
+      callbacks.onEdit ||
+      ((idOrObj) => {
+        const id = typeof idOrObj === "object" ? idOrObj?.id : idOrObj;
+        this.showUsuarioForm(id, () => this.showUsuariosPage(callbacks));
+      });
+
+    const onDelete =
+      callbacks.onDelete ||
+      (async (id) => {
+        if (confirm("Deseja realmente remover este usuário?")) {
+          await this.deleteUsuario(id);
+        }
+      });
+
+    const onFilter =
+      callbacks.onFilter ||
+      (async (filters) => {
+        this.view.showLoading("Filtrando usuários...");
+        try {
+          usuarios = await this.service.listarUsuarios(filters);
+          usuarios = Array.isArray(usuarios) ? usuarios : [];
+          this._usuariosCache = usuarios;
+          this.view.renderUsuariosPage(usuarios, onAdd, onEdit, onDelete, onFilter);
+        } catch (e) {
+          console.error("Erro ao filtrar usuários:", e);
+          showToast("Não foi possível filtrar os usuários.", "error");
+          this.view.renderUsuariosPage(this._usuariosCache, onAdd, onEdit, onDelete, onFilter);
+        }
+      });
+
+    this.view.renderUsuariosPage(usuarios, onAdd, onEdit, onDelete, onFilter);
+  }
+
+  async showUsuarioForm(id, onBack = null) {
+    let usuario = null;
+    if (id) {
+      try {
+        usuario = await this.service.getUsuarioById(id);
+      } catch (err) {
+        console.error("Erro ao obter usuário para edição:", err);
+      }
+    }
+
+    this.view = this.view || new GestorView();
+    this.view.renderUsuarioForm(
+      async (usuarioData) => {
+        try {
+          if (id) {
+            await this.service.atualizarUsuario(id, usuarioData);
+            showToast("Usuário atualizado com sucesso!", "success");
+          } else {
+            await this.service.adicionarUsuario(usuarioData);
+            showToast("Usuário criado com sucesso!", "success");
+          }
+          onBack ? onBack() : navigate("/usuarios");
+        } catch (err) {
+          console.error("Erro ao salvar usuário:", err);
+          throw new Error(extractFriendlyError(err, "Falha ao salvar o usuário."));
+        }
+      },
+      usuario,
+      onBack || (() => navigate("/usuarios"))
+    );
   }
 }

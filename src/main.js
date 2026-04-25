@@ -3,6 +3,8 @@ import "./components/livro/livro-form.js";
 import "./components/livro/livro-list.js";
 import "./components/unidade/unidade-form.js";
 import "./components/unidade/unidade-list.js";
+import "./components/usuario/usuario-form.js";
+import "./components/usuario/usuario-list.js";
 import "./components/app-header.js";
 import { router as appRouter } from "./routes.js";
 import { GestorController } from "./domains/gestor/gestor-controller.js";

@@ -39,7 +39,7 @@ export class GestorService extends BaseService {
     if (!normalized) {
       throw new Error("Informe um ISBN para consulta.");
     }
-    return this.get(`gestor/livros/isbn-lookup/?isbn=${encodeURIComponent(normalized)}`);
+    return this.get(`/gestor/isbn-lookup/?isbn=${encodeURIComponent(normalized)}`);
   }
 
   getObjectWithPropId(nomePropriedade, livroData) {

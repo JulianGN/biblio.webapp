@@ -1,3 +1,4 @@
+// 📁 src/domains/gestor/gestor-view.js
 // View do domínio Gestor
 // Responsável por renderizar e manipular o DOM relacionado ao gestor
 
@@ -71,13 +72,16 @@ export class GestorView {
       </div>
     `;
     const livroFormEl = document.querySelector("livro-form");
+    
     // Passar as unidades disponíveis para o componente
     livroFormEl._unidadesDisponiveis = unidades;
+    
     // Passar as unidades já selecionadas para edição
     if (livro && Array.isArray(livro.unidades)) {
       livroFormEl._unidadesSelecionadas = livro.unidades;
       livroFormEl._livroSelecionado = livro;
     }
+    
     if (livro) {
       if (livroFormEl.titulo) livroFormEl.titulo.value = livro.titulo;
       if (livroFormEl.autor) livroFormEl.autor.value = livro.autor;
@@ -90,6 +94,7 @@ export class GestorView {
       if (livroFormEl.idioma) livroFormEl.idioma.value = livro.idioma || "";
       // Gênero será setado após inserir o select
     }
+
     // Substituir input de gênero por select de forma robusta
     let generoSelect = null;
     let generoInput = livroFormEl.querySelector(
@@ -133,6 +138,7 @@ export class GestorView {
     if (livro && livro.genero && generoSelect) {
       generoSelect.value = livro.genero;
     }
+
     // Substituir input de tipo_obra por select de forma robusta
     let tipoObraSelect = null;
     let tipoObraInput = livroFormEl.querySelector(
@@ -156,11 +162,13 @@ export class GestorView {
     if (livro && livro.tipo_obra && tipoObraSelect) {
       tipoObraSelect.value = livro.tipo_obra;
     }
+
     livroFormEl.addEventListener("submit", (event) => {
       event.preventDefault();
       const submitButton = livroFormEl.querySelector('button[type="submit"]');
       const originalText = submitButton ? submitButton.textContent : "Salvar Livro";
       const feedbackEl = livroFormEl.querySelector("#livro-form-feedback");
+      
       if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = "Salvando...";
@@ -171,7 +179,23 @@ export class GestorView {
         feedbackEl.classList.add("is-loading");
       }
 
-      Promise.resolve(onSubmit(livroFormEl))
+      // CORREÇÃO: Extração forçada dos valores diretamente do DOM
+      const formData = {
+        titulo: livroFormEl.querySelector('input[name="titulo"]')?.value || livroFormEl.titulo?.value,
+        autor: livroFormEl.querySelector('input[name="autor"]')?.value || livroFormEl.autor?.value,
+        editora: livroFormEl.querySelector('input[name="editora"]')?.value || livroFormEl.editora?.value,
+        data_publicacao: livroFormEl.querySelector('input[name="data_publicacao"]')?.value || livroFormEl.data_publicacao?.value,
+        isbn: livroFormEl.querySelector('input[name="isbn"]')?.value || livroFormEl.isbn?.value,
+        paginas: livroFormEl.querySelector('input[name="paginas"]')?.value || livroFormEl.paginas?.value,
+        capa: livroFormEl.querySelector('input[name="capa"]')?.value || livroFormEl.capa?.value,
+        idioma: livroFormEl.querySelector('input[name="idioma"]')?.value || livroFormEl.idioma?.value,
+        genero: livroFormEl.querySelector('select[name="genero"]')?.value,
+        tipo_obra: livroFormEl.querySelector('select[name="tipo_obra"]')?.value,
+        unidades: livroFormEl._unidadesSelecionadas || [] 
+      };
+
+      // Passando o objeto formData extraído em vez do elemento DOM
+      Promise.resolve(onSubmit(formData))
         .catch((err) => {
           if (feedbackEl) {
             feedbackEl.textContent =
@@ -187,6 +211,7 @@ export class GestorView {
           }
         });
     });
+
     if (onBack) {
       document.getElementById("voltar-btn").onclick = onBack;
     }
@@ -201,20 +226,23 @@ export class GestorView {
     `;
     // Aguarda o componente ser renderizado antes de acessar o form
     setTimeout(() => {
-      const form = document.querySelector("#unidade-form");
+      const form = document.querySelector("#unidade-form") || document.querySelector("unidade-form");
       if (!form) return;
+
       if (unidade) {
-        form.nome.value = unidade.nome;
-        form.endereco.value = unidade.endereco;
-        form.telefone.value = unidade.telefone || "";
-        form.email.value = unidade.email || "";
-        form.site.value = unidade.site || "";
+        if(form.nome) form.nome.value = unidade.nome;
+        if(form.endereco) form.endereco.value = unidade.endereco;
+        if(form.telefone) form.telefone.value = unidade.telefone || "";
+        if(form.email) form.email.value = unidade.email || "";
+        if(form.site) form.site.value = unidade.site || "";
       }
+
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         const submitButton = form.querySelector('button[type="submit"]');
         const originalText = submitButton ? submitButton.textContent : "Salvar Unidade";
         const feedbackEl = form.querySelector("#unidade-form-feedback");
+        
         if (submitButton) {
           submitButton.disabled = true;
           submitButton.textContent = "Salvando...";
@@ -225,7 +253,16 @@ export class GestorView {
           feedbackEl.classList.add("is-loading");
         }
 
-        Promise.resolve(typeof onSubmit === "function" ? onSubmit(event.target) : null)
+        // CORREÇÃO: Extração forçada dos valores diretamente do DOM para unidades também
+        const formData = {
+          nome: form.querySelector('input[name="nome"]')?.value || form.nome?.value,
+          endereco: form.querySelector('input[name="endereco"]')?.value || form.endereco?.value,
+          telefone: form.querySelector('input[name="telefone"]')?.value || form.telefone?.value,
+          email: form.querySelector('input[name="email"]')?.value || form.email?.value,
+          site: form.querySelector('input[name="site"]')?.value || form.site?.value
+        };
+
+        Promise.resolve(typeof onSubmit === "function" ? onSubmit(formData) : null)
           .catch((err) => {
             if (feedbackEl) {
               feedbackEl.textContent =
@@ -241,9 +278,12 @@ export class GestorView {
             }
           });
       });
+
       if (onBack) {
-        document.getElementById("voltar-unidade-btn").onclick = onBack;
-        document.getElementById("cancelar-unidade-btn").onclick = onBack;
+        const voltarBtn = document.getElementById("voltar-unidade-btn");
+        const cancelarBtn = document.getElementById("cancelar-unidade-btn");
+        if (voltarBtn) voltarBtn.onclick = onBack;
+        if (cancelarBtn) cancelarBtn.onclick = onBack;
       }
     }, 0);
   }
@@ -347,6 +387,7 @@ export class GestorView {
       "exemplares-unidades-list"
     );
     let exemplaresPorUnidade = [];
+    
     if (livro && livro.unidades) {
       exemplaresPorUnidade = livro.unidades.map((u) => ({
         unidade: u.unidade,
@@ -358,6 +399,7 @@ export class GestorView {
         exemplares: 0,
       }));
     }
+    
     const renderExemplaresList = () => {
       exemplaresListDiv.innerHTML = exemplaresPorUnidade
         .map(
@@ -370,7 +412,9 @@ export class GestorView {
         )
         .join("");
     };
+    
     renderExemplaresList();
+    
     exemplaresListDiv.addEventListener("input", (e) => {
       if (e.target && e.target.type === "number") {
         const id = parseInt(e.target.dataset.id);
@@ -380,6 +424,7 @@ export class GestorView {
         );
       }
     });
+    
     document.getElementById("voltar-exemplares-btn").onclick = () =>
       onBack && onBack();
     document.getElementById("cancelar-exemplares-btn").onclick = () =>

@@ -1,5 +1,9 @@
 // src/api.js
-const API_URL = (import.meta.env.VITE_API_URL ?? 'https://biblio-webapi.onrender.com/gestor')
+const defaultApiUrl = import.meta.env.DEV
+  ? 'http://127.0.0.1:8000/gestor'
+  : 'https://biblio-webapi.onrender.com/gestor';
+
+const API_URL = (import.meta.env.VITE_API_URL ?? defaultApiUrl)
   .replace(/\/$/, ''); // sem barra no final
 
 export async function getLivros() {

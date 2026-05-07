@@ -14,6 +14,7 @@ export class AuthView {
             <label for="password">Senha:</label>
             <input type="password" id="password" name="password" placeholder="Digite qualquer senha" />
           </div>
+          <small id="login-feedback" class="app-inline-feedback" aria-live="polite"></small>
           <button type="submit">Entrar</button>
         </form>
         <div style="text-align:center;margin-top:1.5rem;">
@@ -38,5 +39,35 @@ export class AuthView {
         window.navigate && window.navigate("/faq");
       });
     }
+  }
+
+  setLoading(isLoading) {
+    const form = document.getElementById("login-form");
+    if (!form) return;
+    const button = form.querySelector('button[type="submit"]');
+    const feedback = document.getElementById("login-feedback");
+    if (!button) return;
+
+    if (isLoading) {
+      button.disabled = true;
+      button.textContent = "Entrando...";
+      if (feedback) {
+        feedback.textContent = "Validando credenciais...";
+        feedback.classList.remove("is-error", "is-success");
+        feedback.classList.add("is-loading");
+      }
+      return;
+    }
+
+    button.disabled = false;
+    button.textContent = "Entrar";
+  }
+
+  showError(message) {
+    const feedback = document.getElementById("login-feedback");
+    if (!feedback) return;
+    feedback.textContent = message || "Não foi possível entrar.";
+    feedback.classList.remove("is-loading", "is-success");
+    feedback.classList.add("is-error");
   }
 }

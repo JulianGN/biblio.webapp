@@ -14,8 +14,24 @@ O sistema permite:
 - **Gerenciamento de Livros:**
   - Listar todos os livros cadastrados.
   - Adicionar novos livros com informações como título, autor, editora, data de publicação, ISBN, número de páginas, URL da capa, idioma e gênero.
+  - Preencher automaticamente campos do formulário a partir do ISBN (quando os demais campos ainda estão vazios).
   - Editar informações de livros existentes.
   - Excluir livros.
+
+## Cadastro facilitado por ISBN
+
+No formulário de livro, ao informar ISBN válido:
+
+- A aplicação consulta o backend (`/gestor/livros/isbn-lookup/`).
+- O backend busca metadados na Open Library e traduz textos para pt-BR.
+- O formulário preenche somente campos vazios para evitar sobreposição de dados já digitados.
+
+## Variáveis de ambiente
+
+As variáveis abaixo estão em `.env.example`:
+
+- `VITE_API_URL`: URL base da API backend.
+- `VITE_ISBN_LOOKUP_ENABLED`: habilita/desabilita o preenchimento automático por ISBN (`true`/`false`).
 
 ## Estrutura do Projeto
 

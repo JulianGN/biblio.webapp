@@ -1,14 +1,45 @@
+// 📁 src/domains/gestor/gestor-view.js
 // View do domínio Gestor
 // Responsável por renderizar e manipular o DOM relacionado ao gestor
 
 export class GestorView {
+  showLoading(message = "Carregando...") {
+    const body = document.body;
+    if (!body) return;
+
+    let overlay = document.getElementById("app-global-loading");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "app-global-loading";
+      overlay.className = "app-global-loading";
+      overlay.innerHTML = `
+        <div class="app-global-loading-card">
+          <span class="app-global-loading-spinner" aria-hidden="true"></span>
+          <span id="app-global-loading-text">${message}</span>
+        </div>
+      `;
+      body.appendChild(overlay);
+    }
+
+    const textEl = overlay.querySelector("#app-global-loading-text");
+    if (textEl) textEl.textContent = message;
+    overlay.hidden = false;
+  }
+
+  hideLoading() {
+    const overlay = document.getElementById("app-global-loading");
+    if (overlay) overlay.hidden = true;
+  }
+
   renderGestores(gestores) {
+    this.hideLoading();
     // Exemplo: renderizar lista de gestores no console
     console.log("Lista de Gestores:", gestores);
     // Aqui você pode implementar a renderização no DOM
   }
 
   renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares, onFilter = null, initData = {}) {
+    this.hideLoading();
     const container =
       document.getElementById("livros-list") ||
       document.querySelector("#app-content");
@@ -34,19 +65,23 @@ export class GestorView {
     unidades = [],
     tipo_obras = []
   ) {
+    this.hideLoading();
     document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
         <livro-form ${livro ? "edit" : ""}></livro-form>
       </div>
     `;
     const livroFormEl = document.querySelector("livro-form");
+    
     // Passar as unidades disponíveis para o componente
     livroFormEl._unidadesDisponiveis = unidades;
+    
     // Passar as unidades já selecionadas para edição
     if (livro && Array.isArray(livro.unidades)) {
       livroFormEl._unidadesSelecionadas = livro.unidades;
       livroFormEl._livroSelecionado = livro;
     }
+    
     if (livro) {
       if (livroFormEl.titulo) livroFormEl.titulo.value = livro.titulo;
       if (livroFormEl.autor) livroFormEl.autor.value = livro.autor;
@@ -59,6 +94,7 @@ export class GestorView {
       if (livroFormEl.idioma) livroFormEl.idioma.value = livro.idioma || "";
       // Gênero será setado após inserir o select
     }
+
     // Substituir input de gênero por select de forma robusta
     let generoSelect = null;
     let generoInput = livroFormEl.querySelector(
@@ -102,6 +138,7 @@ export class GestorView {
     if (livro && livro.genero && generoSelect) {
       generoSelect.value = livro.genero;
     }
+
     // Substituir input de tipo_obra por select de forma robusta
     let tipoObraSelect = null;
     let tipoObraInput = livroFormEl.querySelector(
@@ -125,16 +162,63 @@ export class GestorView {
     if (livro && livro.tipo_obra && tipoObraSelect) {
       tipoObraSelect.value = livro.tipo_obra;
     }
+
     livroFormEl.addEventListener("submit", (event) => {
       event.preventDefault();
-      onSubmit(livroFormEl);
+      const submitButton = livroFormEl.querySelector('button[type="submit"]');
+      const originalText = submitButton ? submitButton.textContent : "Salvar Livro";
+      const feedbackEl = livroFormEl.querySelector("#livro-form-feedback");
+      
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Salvando...";
+      }
+      if (feedbackEl) {
+        feedbackEl.textContent = "Salvando dados do livro...";
+        feedbackEl.classList.remove("is-error", "is-success");
+        feedbackEl.classList.add("is-loading");
+      }
+
+      // CORREÇÃO: Extração forçada dos valores diretamente do DOM
+      const formData = {
+        titulo: livroFormEl.querySelector('input[name="titulo"]')?.value || livroFormEl.titulo?.value,
+        autor: livroFormEl.querySelector('input[name="autor"]')?.value || livroFormEl.autor?.value,
+        editora: livroFormEl.querySelector('input[name="editora"]')?.value || livroFormEl.editora?.value,
+        data_publicacao: livroFormEl.querySelector('input[name="data_publicacao"]')?.value || livroFormEl.data_publicacao?.value,
+        isbn: livroFormEl.querySelector('input[name="isbn"]')?.value || livroFormEl.isbn?.value,
+        paginas: livroFormEl.querySelector('input[name="paginas"]')?.value || livroFormEl.paginas?.value,
+        capa: livroFormEl.querySelector('input[name="capa"]')?.value || livroFormEl.capa?.value,
+        idioma: livroFormEl.querySelector('input[name="idioma"]')?.value || livroFormEl.idioma?.value,
+        genero: livroFormEl.querySelector('select[name="genero"]')?.value,
+        tipo_obra: livroFormEl.querySelector('select[name="tipo_obra"]')?.value,
+        unidades: livroFormEl._unidadesSelecionadas || [] 
+      };
+
+      // Passando o objeto formData extraído em vez do elemento DOM
+      Promise.resolve(onSubmit(formData))
+        .catch((err) => {
+          if (feedbackEl) {
+            feedbackEl.textContent =
+              (err && err.message) || "Não foi possível salvar o livro.";
+            feedbackEl.classList.remove("is-loading", "is-success");
+            feedbackEl.classList.add("is-error");
+          }
+        })
+        .finally(() => {
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalText || "Salvar Livro";
+          }
+        });
     });
+
     if (onBack) {
       document.getElementById("voltar-btn").onclick = onBack;
     }
   }
 
   renderUnidadeForm(onSubmit, unidade = null, onBack = null) {
+    this.hideLoading();
     document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
         <unidade-form ${unidade ? "edit" : ""}></unidade-form>
@@ -142,30 +226,70 @@ export class GestorView {
     `;
     // Aguarda o componente ser renderizado antes de acessar o form
     setTimeout(() => {
-      const form = document.querySelector("#unidade-form");
+      const form = document.querySelector("#unidade-form") || document.querySelector("unidade-form");
       if (!form) return;
+
       if (unidade) {
-        form.nome.value = unidade.nome;
-        form.endereco.value = unidade.endereco;
-        form.telefone.value = unidade.telefone || "";
-        form.email.value = unidade.email || "";
-        form.site.value = unidade.site || "";
+        if(form.nome) form.nome.value = unidade.nome;
+        if(form.endereco) form.endereco.value = unidade.endereco;
+        if(form.telefone) form.telefone.value = unidade.telefone || "";
+        if(form.email) form.email.value = unidade.email || "";
+        if(form.site) form.site.value = unidade.site || "";
       }
+
       form.addEventListener("submit", (event) => {
         event.preventDefault();
-        // Garante que o parâmetro é o <form> real
-        if (typeof onSubmit === "function") {
-          onSubmit(event.target);
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalText = submitButton ? submitButton.textContent : "Salvar Unidade";
+        const feedbackEl = form.querySelector("#unidade-form-feedback");
+        
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = "Salvando...";
         }
+        if (feedbackEl) {
+          feedbackEl.textContent = "Salvando dados da unidade...";
+          feedbackEl.classList.remove("is-error", "is-success");
+          feedbackEl.classList.add("is-loading");
+        }
+
+        // CORREÇÃO: Extração forçada dos valores diretamente do DOM para unidades também
+        const formData = {
+          nome: form.querySelector('input[name="nome"]')?.value || form.nome?.value,
+          endereco: form.querySelector('input[name="endereco"]')?.value || form.endereco?.value,
+          telefone: form.querySelector('input[name="telefone"]')?.value || form.telefone?.value,
+          email: form.querySelector('input[name="email"]')?.value || form.email?.value,
+          site: form.querySelector('input[name="site"]')?.value || form.site?.value
+        };
+
+        Promise.resolve(typeof onSubmit === "function" ? onSubmit(formData) : null)
+          .catch((err) => {
+            if (feedbackEl) {
+              feedbackEl.textContent =
+                (err && err.message) || "Não foi possível salvar a unidade.";
+              feedbackEl.classList.remove("is-loading", "is-success");
+              feedbackEl.classList.add("is-error");
+            }
+          })
+          .finally(() => {
+            if (submitButton) {
+              submitButton.disabled = false;
+              submitButton.textContent = originalText || "Salvar Unidade";
+            }
+          });
       });
+
       if (onBack) {
-        document.getElementById("voltar-unidade-btn").onclick = onBack;
-        document.getElementById("cancelar-unidade-btn").onclick = onBack;
+        const voltarBtn = document.getElementById("voltar-unidade-btn");
+        const cancelarBtn = document.getElementById("cancelar-unidade-btn");
+        if (voltarBtn) voltarBtn.onclick = onBack;
+        if (cancelarBtn) cancelarBtn.onclick = onBack;
       }
     }, 0);
   }
 
   renderUnidadesPage(unidades, onAdd, onEdit, onDelete, onView) {
+    this.hideLoading();
     const container =
       document.getElementById("unidades-list") ||
       document.querySelector("#app-content");
@@ -181,6 +305,7 @@ export class GestorView {
   }
 
   renderLivroDetalhe(livro) {
+    this.hideLoading();
     document.querySelector("#app-content").innerHTML = `
       <div class="livro-detalhe-container">
         <h2><button type="button" id="voltar-btn" class="outline border-0"><i class="fa-solid fa-arrow-left"></i></button> Detalhes do Livro</h2>
@@ -218,6 +343,7 @@ export class GestorView {
   }
 
   renderUnidadeDetalhe(unidade) {
+    this.hideLoading();
     document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
         <div class="unidade-detalhe-header">
@@ -235,6 +361,7 @@ export class GestorView {
   }
 
   renderLivroExemplaresForm(livro, onSave, onBack) {
+    this.hideLoading();
     document.querySelector("#app-content").innerHTML = /* html */ `
       <div class="form-container">
         <div class="livro-form-header">
@@ -260,6 +387,7 @@ export class GestorView {
       "exemplares-unidades-list"
     );
     let exemplaresPorUnidade = [];
+    
     if (livro && livro.unidades) {
       exemplaresPorUnidade = livro.unidades.map((u) => ({
         unidade: u.unidade,
@@ -271,6 +399,7 @@ export class GestorView {
         exemplares: 0,
       }));
     }
+    
     const renderExemplaresList = () => {
       exemplaresListDiv.innerHTML = exemplaresPorUnidade
         .map(
@@ -283,7 +412,9 @@ export class GestorView {
         )
         .join("");
     };
+    
     renderExemplaresList();
+    
     exemplaresListDiv.addEventListener("input", (e) => {
       if (e.target && e.target.type === "number") {
         const id = parseInt(e.target.dataset.id);
@@ -293,6 +424,7 @@ export class GestorView {
         );
       }
     });
+    
     document.getElementById("voltar-exemplares-btn").onclick = () =>
       onBack && onBack();
     document.getElementById("cancelar-exemplares-btn").onclick = () =>

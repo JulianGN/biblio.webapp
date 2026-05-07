@@ -34,6 +34,14 @@ export class GestorService extends BaseService {
     return this.get(url);
   }
 
+  async lookupLivroPorIsbn(isbn) {
+    const normalized = String(isbn || "").trim();
+    if (!normalized) {
+      throw new Error("Informe um ISBN para consulta.");
+    }
+    return this.get(`/gestor/isbn-lookup/?isbn=${encodeURIComponent(normalized)}`);
+  }
+
   getObjectWithPropId(nomePropriedade, livroData) {
     return {
       [nomePropriedade]: typeof livroData[nomePropriedade] === "object"

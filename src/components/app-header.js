@@ -14,6 +14,7 @@ class AppHeader extends HTMLElement {
     const path = window.location.pathname;
     const isLivros = path.startsWith("/livros");
     const isUnidades = path.startsWith("/unidades");
+    const isUsuarios = path.startsWith("/usuarios");
     const isFaq = path.startsWith("/faq");
     
     this.innerHTML = /* html */ `
@@ -47,6 +48,12 @@ class AppHeader extends HTMLElement {
             <a href="#" id="menu-unidades-btn" class="side-menu-item ${isUnidades ? 'active' : ''}">
               <i class="fa-solid fa-building"></i>
               <span>Unidades</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" id="menu-usuarios-btn" class="side-menu-item ${isUsuarios ? 'active' : ''}">
+              <i class="fa-solid fa-users"></i>
+              <span>Usuários</span>
             </a>
           </li>
           <li>
@@ -114,6 +121,12 @@ class AppHeader extends HTMLElement {
       e.preventDefault();
       closeMenu();
       window.navigate && window.navigate("/unidades");
+    };
+
+    this.querySelector("#menu-usuarios-btn").onclick = (e) => {
+      e.preventDefault();
+      closeMenu();
+      window.navigate && window.navigate("/usuarios");
     };
     
     this.querySelector("#menu-faq-btn").onclick = (e) => {

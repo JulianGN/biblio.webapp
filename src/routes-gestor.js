@@ -1,6 +1,6 @@
 export async function gestorRoutes({ gestorController, gestorView, navigate }) {
   const path = window.location.pathname;
-  if (!/^\/(livros|unidades)/.test(path)) {
+  if (!/^\/(livros|unidades|usuarios)/.test(path)) {
     return false;
   }
   function clearHeader() {
@@ -53,6 +53,16 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
     );
     const id = parseInt(path.split("/")[2]);
     await gestorController.editUnidade(id, () => navigate("/unidades"));
+    return true;
+  }
+
+  if (/^\/usuarios\/[0-9]+$/.test(path)) {
+    document.body.insertAdjacentHTML(
+      "afterbegin",
+      `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+    );
+    const id = parseInt(path.split("/")[2]);
+    await gestorController.showUsuarioForm(id, () => navigate("/usuarios"));
     return true;
   }
 
@@ -119,6 +129,25 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
         `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
       );
       gestorController.showUnidadeForm(null, () => navigate("/unidades"));
+      return true;
+    case "/usuarios":
+      document.body.insertAdjacentHTML(
+        "afterbegin",
+        `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+      );
+      document.querySelector("#app-content").innerHTML = `<div id="usuarios-list"></div>`;
+      await gestorController.showUsuariosPage({
+        onAdd: () => navigate("/usuarios/novo"),
+        onEdit: (id) => navigate(`/usuarios/${id}`),
+        onDelete: (id) => gestorController.deleteUsuario(id),
+      });
+      return true;
+    case "/usuarios/novo":
+      document.body.insertAdjacentHTML(
+        "afterbegin",
+        `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+      );
+      gestorController.showUsuarioForm(null, () => navigate("/usuarios"));
       return true;
     default:
       return false;

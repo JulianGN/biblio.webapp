@@ -1,4 +1,5 @@
 import "./unidade-form.css";
+import { attachPhoneMask } from "../../utils/input-mask.js";
 
 // Web Component para o formulário de unidade (biblioteca)
 class UnidadeForm extends HTMLElement {
@@ -14,23 +15,23 @@ class UnidadeForm extends HTMLElement {
         </div>
         <div>
           <label for="nome">Nome:</label>
-          <input type="text" id="nome" name="nome" required />
+          <input type="text" id="nome" name="nome" maxlength="255" required />
         </div>
         <div>
           <label for="endereco">Endereço:</label>
-          <input type="text" id="endereco" name="endereco" required />
+          <input type="text" id="endereco" name="endereco" maxlength="500" required />
         </div>
         <div>
           <label for="telefone">Telefone:</label>
-          <input type="text" id="telefone" name="telefone" />
+          <input type="tel" id="telefone" name="telefone" maxlength="20" />
         </div>
         <div>
           <label for="email">Email:</label>
-          <input type="email" id="email" name="email" />
+          <input type="email" id="email" name="email" maxlength="254" />
         </div>
         <div>
           <label for="site">Site:</label>
-          <input type="url" id="site" name="site" />
+          <input type="url" id="site" name="site" maxlength="200" />
         </div>
         <small id="unidade-form-feedback" class="app-inline-feedback" aria-live="polite"></small>
         <div class="unidade-form-footer">
@@ -42,6 +43,8 @@ class UnidadeForm extends HTMLElement {
     setTimeout(() => {
       const voltarBtn = this.querySelector("#voltar-unidade-btn");
       const cancelarBtn = this.querySelector("#cancelar-unidade-btn");
+      const telefoneInput = this.querySelector("#telefone");
+      attachPhoneMask(telefoneInput);
       if (voltarBtn)
         voltarBtn.onclick = (e) => {
           e.preventDefault();

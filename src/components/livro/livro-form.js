@@ -44,7 +44,7 @@ class LivroForm extends HTMLElement {
                 <div>
                     <label for="isbn">ISBN:</label>
                     <div class="isbn-input-wrapper" data-loading="false">
-                      <input type="text" id="isbn" name="isbn">
+                      <input type="text" id="isbn" name="isbn" maxlength="13" inputmode="numeric" pattern="(?:\d{10}|\d{13}|\d{9}[\dXx])">
                       <button
                         type="button"
                         id="isbn-lookup-trigger"
@@ -58,15 +58,15 @@ class LivroForm extends HTMLElement {
                 </div>
                 <div>
                     <label for="titulo">Título:</label>
-                    <input type="text" id="titulo" name="titulo" required>
+                  <input type="text" id="titulo" name="titulo" maxlength="255" required>
                 </div>
                 <div>
                     <label for="autor">Autor:</label>
-                    <input type="text" id="autor" name="autor" required>
+                  <input type="text" id="autor" name="autor" maxlength="255" required>
                 </div>
                 <div>
                     <label for="editora">Editora:</label>
-                    <input type="text" id="editora" name="editora">
+                  <input type="text" id="editora" name="editora" maxlength="255">
                 </div>
                 <div>
                     <label for="data_publicacao">Data de Publicação:</label>
@@ -74,15 +74,15 @@ class LivroForm extends HTMLElement {
                 </div>
                 <div>
                     <label for="paginas">Páginas:</label>
-                    <input type="number" id="paginas" name="paginas">
+                  <input type="number" id="paginas" name="paginas" min="1" max="100000">
                 </div>
                 <div>
                     <label for="capa">URL da Capa:</label>
-                    <input type="url" id="capa" name="capa">
+                  <input type="url" id="capa" name="capa" maxlength="255">
                 </div>
                 <div>
                     <label for="idioma">Idioma:</label>
-                    <input type="text" id="idioma" name="idioma">
+                  <input type="text" id="idioma" name="idioma" maxlength="50">
                 </div>
         <div>
           <label for="genero">Gênero (ID):</label>
@@ -109,7 +109,7 @@ class LivroForm extends HTMLElement {
                     </div>
                     <div class="livro-unidade">
                       <label for="exemplares-input">Exemplares:</label>
-                      <input type="number" id="exemplares-input" min="1" value="1">
+                      <input type="number" id="exemplares-input" min="1" max="9999" value="1">
                     </div>
                      <button type="button" id="add-unidade-livro" class="outline">Adicionar Unidade</button>
                 </div>

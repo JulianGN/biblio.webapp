@@ -1,4 +1,5 @@
 import "./livro-list.css";
+import { getLivroActionsDropdown } from "./livro-actions-dropdown.js";
 
 // Web Component para a lista de livros
 class LivroList extends HTMLElement {
@@ -51,9 +52,44 @@ class LivroList extends HTMLElement {
     this.render();
   }
 
+  set onEmprestar(callback) {
+    this._onEmprestar = callback;
+    this.render();
+  }
+
   set onFilter(callback) {
     this._onFilter = callback;
     this.render();
+  }
+
+  disconnectedCallback() {
+    // Cleanup se necessário
+  }
+
+  _renderTableRows(livros) {
+    return livros
+      .map(
+        (livro) => /* html */ `
+          <tr data-livro-id="${livro.id}">
+            <td>${livro.titulo}</td>
+            <td>${livro.autor}</td>
+            <td>${livro.isbn || "-"}</td>
+            <td class="text-end">
+              <button
+                type="button"
+                class="livro-actions-toggle outline border-0"
+                data-livro-id="${livro.id}"
+                aria-haspopup="true"
+                aria-expanded="false"
+                title="Ações do livro"
+              >
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+              </button>
+            </td>
+          </tr>
+        `
+      )
+      .join("");
   }
 
   // Método para renderizar a lista de livros
@@ -166,27 +202,17 @@ class LivroList extends HTMLElement {
       if (livros.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#888;">Nenhum livro encontrado. Tente ajustar os filtros ou adicione um novo livro.</td></tr>`;
       } else {
-        tbody.innerHTML = livros
-          .map(
-            (livro) => /* html */ `
-              <tr>
-                <td>${livro.titulo}</td>
-                <td>${livro.autor}</td>
-                <td>${livro.isbn || "-"}</td>
-                <td>
-                  <div class="list-actions livro-list-actions">
-                    <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-                    <button class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
-                    <button class="edit-exemplares-livro-icon outline border-0" data-id="${livro.id}" title="Exemplares por unidade"><i class="fa-solid fa-list-ol"></i></button>
-                    <button class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
-                  </div>
-                </td>
-              </tr>
-            `
-          )
-          .join("");
+        tbody.innerHTML = this._renderTableRows(livros);
       }
     }
+    
+    // Configura o dropdown compartilhado com os callbacks
+    const dropdown = getLivroActionsDropdown();
+    dropdown.onEdit = this._onEdit;
+    dropdown.onDelete = this._onDelete;
+    dropdown.onView = this._onView;
+    dropdown.onEditExemplares = this._onEditExemplares;
+    dropdown.onEmprestar = this._onEmprestar;
     
     // Eventos
     this.querySelector("#add-livro-btn").onclick = (e) => {
@@ -250,25 +276,7 @@ class LivroList extends HTMLElement {
       if (livros.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#888;">Nenhum livro encontrado. Tente ajustar os filtros ou adicione um novo livro.</td></tr>`;
       } else {
-        tbody.innerHTML = livros
-          .map(
-            (livro) => /* html */ `
-              <tr>
-                <td>${livro.titulo}</td>
-                <td>${livro.autor}</td>
-                <td>${livro.isbn || "-"}</td>
-                <td>
-                  <div class="list-actions livro-list-actions">
-                    <button class="view-livro-icon outline border-0" data-id="${livro.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-                    <button class="edit-livro-icon outline border-0" data-id="${livro.id}" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
-                    <button class="edit-exemplares-livro-icon outline border-0" data-id="${livro.id}" title="Exemplares por unidade"><i class="fa-solid fa-list-ol"></i></button>
-                    <button class="delete-livro-icon outline border-0" data-id="${livro.id}" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
-                  </div>
-                </td>
-              </tr>
-            `
-          )
-          .join("");
+        tbody.innerHTML = this._renderTableRows(livros);
       }
       
       // Reatribui eventos aos botões da nova tabela
@@ -277,44 +285,15 @@ class LivroList extends HTMLElement {
   }
 
   addTableEventListeners() {
-    this.querySelectorAll(".edit-livro-icon").forEach((btn) => {
+    const dropdown = getLivroActionsDropdown();
+
+    this.querySelectorAll(".livro-actions-toggle").forEach((btn) => {
       btn.onclick = (e) => {
         e.preventDefault();
-        if (this._onEdit) this._onEdit(parseInt(btn.dataset.id));
-      };
-    });
-    this.querySelectorAll(".delete-livro-icon").forEach((btn) => {
-      btn.onclick = async (e) => {
-        e.preventDefault();
-        if (window.confirm("Tem certeza que deseja excluir este livro?")) {
-          if (!this._onDelete) return;
-          const originalHtml = btn.innerHTML;
-          btn.disabled = true;
-          btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-          try {
-            await Promise.resolve(this._onDelete(parseInt(btn.dataset.id)));
-          } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
-          }
-        }
-      };
-    });
-    this.querySelectorAll(".view-livro-icon").forEach((btn) => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        if (window.navigate)
-          window.navigate(`/livros/${btn.dataset.id}/detalhe`);
-        else if (this._onView) this._onView(parseInt(btn.dataset.id));
-      };
-    });
-    this.querySelectorAll(".edit-exemplares-livro-icon").forEach((btn) => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        if (window.navigate)
-          window.navigate(`/livros/${btn.dataset.id}/exemplares`);
-        else if (this._onEditExemplares)
-          this._onEditExemplares(parseInt(btn.dataset.id));
+        e.stopPropagation();
+
+        const livroId = parseInt(btn.dataset.livroId);
+        dropdown.open(btn, livroId);
       };
     });
   }

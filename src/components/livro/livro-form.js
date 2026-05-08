@@ -35,12 +35,9 @@ class LivroForm extends HTMLElement {
     }
     this.innerHTML = `
             <form id="livro-form">
-                <div class="livro-form-header">
-                    <button type="button" id="voltar-btn" class="outline border-0"><i class="fa-solid fa-arrow-left"></i></button>
-                    <h2 style="margin: 0;">${
-                      isEdit ? "Editar Livro" : "Adicionar Livro"
-                    }</h2>
-                </div>
+                <page-header title="${
+                  isEdit ? "Editar Livro" : "Adicionar Livro"
+                }" back-button-id="voltar-btn"></page-header>
                 <div>
                     <label for="isbn">ISBN:</label>
                     <div class="isbn-input-wrapper" data-loading="false">

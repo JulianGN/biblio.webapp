@@ -15,6 +15,7 @@ class AppHeader extends HTMLElement {
     const isLivros = path.startsWith("/livros");
     const isUnidades = path.startsWith("/unidades");
     const isUsuarios = path.startsWith("/usuarios");
+    const isEmprestimos = path.startsWith("/emprestimos");
     const isFaq = path.startsWith("/faq");
     
     this.innerHTML = /* html */ `
@@ -54,6 +55,12 @@ class AppHeader extends HTMLElement {
             <a href="#" id="menu-usuarios-btn" class="side-menu-item ${isUsuarios ? 'active' : ''}">
               <i class="fa-solid fa-users"></i>
               <span>Usuários</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" id="menu-emprestimos-btn" class="side-menu-item ${isEmprestimos ? 'active' : ''}">
+              <i class="fa-solid fa-right-left"></i>
+              <span>Empréstimos</span>
             </a>
           </li>
           <li>
@@ -127,6 +134,12 @@ class AppHeader extends HTMLElement {
       e.preventDefault();
       closeMenu();
       window.navigate && window.navigate("/usuarios");
+    };
+
+    this.querySelector("#menu-emprestimos-btn").onclick = (e) => {
+      e.preventDefault();
+      closeMenu();
+      window.navigate && window.navigate("/emprestimos");
     };
     
     this.querySelector("#menu-faq-btn").onclick = (e) => {

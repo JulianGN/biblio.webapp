@@ -7,12 +7,9 @@ class UnidadeForm extends HTMLElement {
     const isEdit = this.hasAttribute("edit");
     this.innerHTML = `
       <form id="unidade-form">
-        <div class="unidade-form-header">
-          <button type="button" id="voltar-unidade-btn" class="outline border-0"><i class="fa-solid fa-arrow-left"></i></button>
-          <h2 style="margin: 0;">${
-            isEdit ? "Editar Unidade" : "Adicionar Unidade"
-          }</h2>
-        </div>
+        <page-header title="${
+          isEdit ? "Editar Unidade" : "Adicionar Unidade"
+        }" back-button-id="voltar-unidade-btn"></page-header>
         <div>
           <label for="nome">Nome:</label>
           <input type="text" id="nome" name="nome" maxlength="255" required />

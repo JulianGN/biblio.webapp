@@ -1,0 +1,20 @@
+.emprestimo-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.emprestimo-filter-grid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 640px) {
+  .emprestimo-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}

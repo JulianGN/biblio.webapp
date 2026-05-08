@@ -1,13 +1,3 @@
-.unidade-form-header {
-    display: flex;
-    align-items: center;
-    padding: 0.5rem 0;
-}
-
-.unidade-form-header button {
-    margin-bottom: 0;
-}
-
 .unidade-form-footer {
     display: grid;
     justify-content: space-between;

@@ -29,6 +29,7 @@ export class GestorController {
     this._livrosCache = null;
     this._unidadesCache = null;
     this._usuariosCache = null;
+    this._emprestimosCache = null;
     this._lastCallbacks = null;
   }
 
@@ -133,6 +134,46 @@ export class GestorController {
       ((livroId) =>
         this.showLivroExemplaresForm(livroId, () => this.showLivrosPage(callbacks)));
 
+    const onEmprestar =
+      callbacks.onEmprestar ||
+      ((livroId) => this.showEmprestimoForm(null, () => navigate("/emprestimos"), { livroId }));
+
+    const onFilter =
+      callbacks.onFilter ||
+      (async (filters) => {
+        this.view.showLoading("Filtrando livros...");
+        try {
+          let filtered = await this.service.listarLivros(filters);
+          filtered = Array.isArray(filtered) ? filtered : [];
+          this._livrosCache = filtered;
+          this.view.renderLivrosPage(
+            filtered,
+            onAdd,
+            onEdit,
+            onDelete,
+            onView,
+            onEditExemplares,
+            onEmprestar,
+            onFilter,
+            this.initData
+          );
+        } catch (err) {
+          console.error("Falha ao filtrar livros:", err);
+          showToast("Não foi possível aplicar os filtros de livros.", "error");
+          this.view.renderLivrosPage(
+            this._livrosCache,
+            onAdd,
+            onEdit,
+            onDelete,
+            onView,
+            onEditExemplares,
+            onEmprestar,
+            onFilter,
+            this.initData
+          );
+        }
+      });
+
     this.view.renderLivrosPage(
       livros,
       onAdd,
@@ -140,6 +181,8 @@ export class GestorController {
       onDelete,
       onView,
       onEditExemplares,
+      onEmprestar,
+      onFilter,
       this.initData
     );
   }
@@ -421,6 +464,123 @@ export class GestorController {
       },
       usuario,
       onBack || (() => navigate("/usuarios"))
+    );
+  }
+
+  async deleteEmprestimo(id) {
+    await this.service.removerEmprestimo(id);
+    await this.showEmprestimosPage(this._lastCallbacks || {});
+  }
+
+  async showEmprestimosPage(callbacks = {}) {
+    this.view = this.view || new GestorView();
+    this.view.showLoading("Carregando lista de empréstimos...");
+
+    let emprestimos = [];
+    try {
+      emprestimos = await this.service.listarEmprestimos();
+    } catch (e) {
+      console.error("Falha ao listar empréstimos:", e);
+      showToast("Não foi possível carregar a lista de empréstimos agora.", "error");
+    }
+    emprestimos = Array.isArray(emprestimos) ? emprestimos : [];
+
+    this._emprestimosCache = emprestimos;
+    this._lastCallbacks = callbacks;
+
+    const onAdd =
+      callbacks.onAdd ||
+      (() => this.showEmprestimoForm(null, () => this.showEmprestimosPage(callbacks)));
+
+    const onEdit =
+      callbacks.onEdit ||
+      ((idOrObj) => {
+        const id = typeof idOrObj === "object" ? idOrObj?.id : idOrObj;
+        this.showEmprestimoForm(id, () => this.showEmprestimosPage(callbacks));
+      });
+
+    const onDelete =
+      callbacks.onDelete ||
+      (async (id) => {
+        if (confirm("Deseja realmente remover este empréstimo?")) {
+          await this.deleteEmprestimo(id);
+        }
+      });
+
+    const onFilter =
+      callbacks.onFilter ||
+      (async (filters) => {
+        this.view.showLoading("Filtrando empréstimos...");
+        try {
+          let filtered = await this.service.listarEmprestimos(filters);
+          filtered = Array.isArray(filtered) ? filtered : [];
+          this._emprestimosCache = filtered;
+          this.view.renderEmprestimosPage(filtered, onAdd, onEdit, onDelete, onFilter);
+        } catch (e) {
+          console.error("Erro ao filtrar empréstimos:", e);
+          showToast("Não foi possível filtrar os empréstimos.", "error");
+          this.view.renderEmprestimosPage(this._emprestimosCache, onAdd, onEdit, onDelete, onFilter);
+        }
+      });
+
+    this.view.renderEmprestimosPage(emprestimos, onAdd, onEdit, onDelete, onFilter);
+  }
+
+  async showEmprestimoForm(id, onBack = null, options = {}) {
+    let emprestimo = null;
+    if (id) {
+      try {
+        emprestimo = await this.service.getEmprestimoById(id);
+      } catch (err) {
+        console.error("Erro ao obter empréstimo para edição:", err);
+      }
+    }
+
+    let livros = [];
+    let usuarios = [];
+    let unidades = [];
+    try {
+      const [livrosResp, usuariosResp, unidadesResp] = await Promise.all([
+        this.service.listarLivros(),
+        this.service.listarUsuarios(),
+        this.service.listarUnidades(),
+      ]);
+      livros = Array.isArray(livrosResp) ? livrosResp : [];
+      usuarios = Array.isArray(usuariosResp) ? usuariosResp : [];
+      unidades = Array.isArray(unidadesResp) ? unidadesResp : [];
+    } catch (err) {
+      console.error("Erro ao carregar dados de apoio para empréstimo:", err);
+      showToast("Não foi possível carregar livros e usuários para o formulário.", "error");
+    }
+
+    this.view = this.view || new GestorView();
+    const preselectedLivroId = !id ? Number(options?.livroId || 0) : 0;
+    this.view.renderEmprestimoForm(
+      async (emprestimoData) => {
+        try {
+          if (id) {
+            await this.service.atualizarEmprestimo(id, emprestimoData);
+            showToast("Empréstimo atualizado com sucesso!", "success");
+          } else {
+            await this.service.adicionarEmprestimo(emprestimoData);
+            showToast("Empréstimo criado com sucesso!", "success");
+          }
+          onBack ? onBack() : navigate("/emprestimos");
+        } catch (err) {
+          console.error("Erro ao salvar empréstimo:", err);
+          throw new Error(extractFriendlyError(err, "Falha ao salvar o empréstimo."));
+        }
+      },
+      emprestimo,
+      onBack || (() => navigate("/emprestimos")),
+      livros,
+      usuarios,
+      unidades,
+      {
+        livroId: Number.isFinite(preselectedLivroId) && preselectedLivroId > 0
+          ? preselectedLivroId
+          : null,
+      }
     );
   }
 }

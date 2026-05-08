@@ -53,3 +53,33 @@ export class Usuario {
     this.observacoes = observacoes;
   }
 }
+
+export class Emprestimo {
+  constructor({
+    id,
+    livro,
+    unidade,
+    usuario,
+    livro_titulo,
+    unidade_nome,
+    usuario_nome,
+    data_emprestimo,
+    data_prevista_devolucao,
+    data_devolucao,
+    status,
+    observacoes,
+  }) {
+    this.id = id;
+    this.livro = livro;
+    this.unidade = unidade;
+    this.usuario = usuario;
+    this.livro_titulo = livro_titulo;
+    this.unidade_nome = unidade_nome;
+    this.usuario_nome = usuario_nome;
+    this.data_emprestimo = data_emprestimo;
+    this.data_prevista_devolucao = data_prevista_devolucao;
+    this.data_devolucao = data_devolucao;
+    this.status = status;
+    this.observacoes = observacoes;
+  }
+}

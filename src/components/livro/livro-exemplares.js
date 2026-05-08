@@ -95,12 +95,7 @@ class LivroExemplaresPage extends HTMLElement {
 
     this.innerHTML = `
       <section class="container">
-        <div class="livro-form-header" style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">
-          <button type="button" id="voltar-btn" class="outline border-0" title="Voltar">
-            <i class="fa-solid fa-arrow-left"></i>
-          </button>
-          <h2 style="margin:0">Exemplares por Unidade</h2>
-        </div>
+        <page-header title="Exemplares por Unidade" back-button-id="voltar-btn"></page-header>
 
         <div style="margin:8px 0 16px 0;color:#555">
           ${livro ? `<div><strong>Livro:</strong> ${livro.titulo}</div>` : ""}

@@ -43,7 +43,7 @@ export class GestorView {
     // Aqui você pode implementar a renderização no DOM
   }
 
-  renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares, onFilter = null, initData = {}) {
+  renderLivrosPage(livros, onAdd, onEdit, onDelete, onView, onEditExemplares, onEmprestar = null, onFilter = null, initData = {}) {
     this.hideLoading();
     const container =
       document.getElementById("livros-list") ||
@@ -58,6 +58,7 @@ export class GestorView {
     livroList.onDelete = onDelete;
     livroList.onView = onView;
     livroList.onEditExemplares = onEditExemplares;
+    livroList.onEmprestar = onEmprestar;
     livroList.onFilter = onFilter;
     livroList.initData = initData;
   }
@@ -82,9 +83,20 @@ export class GestorView {
     livroFormEl._unidadesDisponiveis = unidades;
     
     // Passar as unidades já selecionadas para edição
-    if (livro && Array.isArray(livro.unidades)) {
-      livroFormEl._unidadesSelecionadas = livro.unidades;
-      livroFormEl._livroSelecionado = livro;
+    if (livro) {
+      const unidadesSelecionadas = Array.isArray(livro.unidades)
+        ? livro.unidades
+        : Array.isArray(livro.unidades_detalhe)
+          ? livro.unidades_detalhe
+          : [];
+
+      livroFormEl._unidadesSelecionadas = unidadesSelecionadas;
+      livroFormEl._livroSelecionado = {
+        ...livro,
+        unidades: Array.isArray(livro.unidades)
+          ? livro.unidades
+          : unidadesSelecionadas,
+      };
     }
     
     if (livro) {
@@ -362,6 +374,37 @@ export class GestorView {
     usuarioForm.usuario = usuario;
     usuarioForm.onSubmit = onSubmit;
     usuarioForm.onBack = onBack;
+  }
+
+  renderEmprestimosPage(emprestimos, onAdd, onEdit, onDelete, onFilter = null) {
+    this.hideLoading();
+    const container =
+      document.getElementById("emprestimos-list") ||
+      document.querySelector("#app-content");
+    container.innerHTML = /* html */ `
+      <emprestimo-list></emprestimo-list>
+    `;
+    const emprestimoList = container.querySelector("emprestimo-list");
+    emprestimoList.emprestimos = emprestimos;
+    emprestimoList.onAdd = onAdd;
+    emprestimoList.onEdit = onEdit;
+    emprestimoList.onDelete = onDelete;
+    emprestimoList.onFilter = onFilter;
+  }
+
+  renderEmprestimoForm(onSubmit, emprestimo = null, onBack = null, livros = [], usuarios = [], unidades = [], formOptions = {}) {
+    this.hideLoading();
+    document.querySelector("#app-content").innerHTML = /* html */ `
+      <emprestimo-form ${emprestimo ? "edit" : ""}></emprestimo-form>
+    `;
+    const emprestimoForm = document.querySelector("emprestimo-form");
+    emprestimoForm.livros = livros;
+    emprestimoForm.usuarios = usuarios;
+    emprestimoForm.unidades = unidades;
+    emprestimoForm.emprestimo = emprestimo;
+    emprestimoForm.formOptions = formOptions;
+    emprestimoForm.onSubmit = onSubmit;
+    emprestimoForm.onBack = onBack;
   }
 
   renderLivroDetalhe(livro) {

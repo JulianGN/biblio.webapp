@@ -196,3 +196,49 @@ export function validateUsuarioFormData(payload) {
   const validation = validatePayload(cleanData, usuarioRules);
   return { cleanData, ...validation };
 }
+
+const emprestimoRules = {
+  livro: { label: "Livro", required: true },
+  unidade: { label: "Unidade", required: true },
+  usuario: { label: "Usuário", required: true },
+  data_emprestimo: { label: "Data de empréstimo", required: true },
+  status: {
+    label: "Status",
+    required: true,
+    customValidate: (value) => {
+      if (!["aberto", "devolvido"].includes(String(value || ""))) {
+        return "Status inválido.";
+      }
+      return "";
+    },
+  },
+  data_prevista_devolucao: {
+    label: "Data prevista de devolução",
+    customValidate: (value, payload) => {
+      if (!value || !payload.data_emprestimo) return "";
+      if (value < payload.data_emprestimo) {
+        return "Data prevista não pode ser anterior à data de empréstimo.";
+      }
+      return "";
+    },
+  },
+  data_devolucao: {
+    label: "Data de devolução",
+    customValidate: (value, payload) => {
+      if (payload.status === "devolvido" && !value) {
+        return "Data de devolução é obrigatória quando o status for devolvido.";
+      }
+      if (value && payload.data_emprestimo && value < payload.data_emprestimo) {
+        return "Data de devolução não pode ser anterior à data de empréstimo.";
+      }
+      return "";
+    },
+  },
+  observacoes: { label: "Observações", maxLength: 1000 },
+};
+
+export function validateEmprestimoFormData(payload) {
+  const cleanData = sanitizePayload(payload);
+  const validation = validatePayload(cleanData, emprestimoRules);
+  return { cleanData, ...validation };
+}

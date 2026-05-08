@@ -7,13 +7,7 @@ class UsuarioForm extends HTMLElement {
     const isEdit = this.hasAttribute("edit");
     this.innerHTML = /* html */ `
       <section class="form-container">
-        <div class="usuario-form-header">
-          <button type="button" id="voltar-usuario-btn" class="outline border-0"><i class="fa-solid fa-arrow-left"></i></button>
-          <div>
-            <p style="margin:0 0 0.25rem 0;letter-spacing:0.08em;text-transform:uppercase;font-size:0.78rem;opacity:0.7;">Controle de empréstimos</p>
-            <h2 style="margin:0;">${isEdit ? "Editar Usuário" : "Adicionar Usuário"}</h2>
-          </div>
-        </div>
+        <page-header title="${isEdit ? "Editar Usuário" : "Adicionar Usuário"}" subtitle="Controle de empréstimos" back-button-id="voltar-usuario-btn"></page-header>
 
         <form id="usuario-form" class="usuario-form-fields">
           <div>

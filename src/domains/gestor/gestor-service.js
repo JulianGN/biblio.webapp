@@ -1,6 +1,6 @@
 // Service do domínio Gestor
 // Lógica de negócio relacionada ao gestor
-import { Livro, Unidade, Usuario } from "./gestor-model.js";
+import { Livro, Unidade, Usuario, Emprestimo } from "./gestor-model.js";
 import { BaseService } from "../base-service.js";
 
 export class GestorService extends BaseService {
@@ -205,6 +205,60 @@ export class GestorService extends BaseService {
 
   async removerUsuario(usuarioId) {
     const response = await fetch(this.baseUrl + `gestor/usuarios/${usuarioId}/`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || `Erro ${response.status}`);
+    }
+    return true;
+  }
+
+  // CRUD de Empréstimos
+  async listarEmprestimos(filters = {}) {
+    let url = "gestor/emprestimos/";
+    const queryParams = new URLSearchParams();
+
+    if (filters.search) queryParams.append("search", filters.search);
+    if (filters.status) queryParams.append("status", filters.status);
+    if (filters.livro) queryParams.append("livro", String(filters.livro));
+    if (filters.usuario) queryParams.append("usuario", String(filters.usuario));
+    if (filters.unidade) queryParams.append("unidade", String(filters.unidade));
+
+    if (queryParams.toString()) {
+      url += "?" + queryParams.toString();
+    }
+
+    return this.get(url);
+  }
+
+  adicionarEmprestimo(emprestimoData) {
+    const payload = new Emprestimo({
+      ...emprestimoData,
+      livro: Number(emprestimoData.livro),
+      unidade: Number(emprestimoData.unidade),
+      usuario: Number(emprestimoData.usuario),
+    });
+    return this.post("gestor/emprestimos/", payload);
+  }
+
+  async getEmprestimoById(id) {
+    return this.get(`gestor/emprestimos/${id}/`);
+  }
+
+  async atualizarEmprestimo(emprestimoId, emprestimoData) {
+    const payload = {
+      ...emprestimoData,
+      livro: Number(emprestimoData.livro),
+      unidade: Number(emprestimoData.unidade),
+      usuario: Number(emprestimoData.usuario),
+    };
+    return this.put(`gestor/emprestimos/${emprestimoId}/`, payload);
+  }
+
+  async removerEmprestimo(emprestimoId) {
+    const response = await fetch(this.baseUrl + `gestor/emprestimos/${emprestimoId}/`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
     });

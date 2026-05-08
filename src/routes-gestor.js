@@ -1,6 +1,6 @@
 export async function gestorRoutes({ gestorController, gestorView, navigate }) {
   const path = window.location.pathname;
-  if (!/^\/(livros|unidades|usuarios)/.test(path)) {
+  if (!/^\/(livros|unidades|usuarios|emprestimos)/.test(path)) {
     return false;
   }
   function clearHeader() {
@@ -43,7 +43,7 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
       `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
     );
     const id = parseInt(path.split("/")[2]);
-    gestorController.editLivro(id, () => navigate("/livros"));
+    await gestorController.showLivroForm(id, () => navigate("/livros"));
     return true;
   }
   if (/^\/unidades\/[0-9]+$/.test(path)) {
@@ -63,6 +63,16 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
     );
     const id = parseInt(path.split("/")[2]);
     await gestorController.showUsuarioForm(id, () => navigate("/usuarios"));
+    return true;
+  }
+
+  if (/^\/emprestimos\/[0-9]+$/.test(path)) {
+    document.body.insertAdjacentHTML(
+      "afterbegin",
+      `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+    );
+    const id = parseInt(path.split("/")[2]);
+    await gestorController.showEmprestimoForm(id, () => navigate("/emprestimos"));
     return true;
   }
 
@@ -90,12 +100,13 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
       gestorController.showLivrosPage({
         onAdd: () => navigate("/livros/novo"),
         onEdit: (id) => navigate(`/livros/${id}`),
-        onDelete: (id) => {
-          gestorController.deleteLivro(id);
+        onDelete: async (id) => {
+          await gestorController.removerLivro(id);
           navigate("/livros");
         },
         onView: (id) => navigate(`/livros/${id}/detalhe`),
         onEditExemplares: (id) => navigate(`/livros/${id}/exemplares`),
+        onEmprestar: (id) => navigate(`/emprestimos/novo?livro=${id}`),
       });
       return true;
     case "/livros/novo":
@@ -148,6 +159,30 @@ export async function gestorRoutes({ gestorController, gestorView, navigate }) {
         `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
       );
       gestorController.showUsuarioForm(null, () => navigate("/usuarios"));
+      return true;
+    case "/emprestimos":
+      document.body.insertAdjacentHTML(
+        "afterbegin",
+        `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+      );
+      document.querySelector("#app-content").innerHTML = `<div id="emprestimos-list"></div>`;
+      await gestorController.showEmprestimosPage({
+        onAdd: () => navigate("/emprestimos/novo"),
+        onEdit: (id) => navigate(`/emprestimos/${id}`),
+        onDelete: (id) => gestorController.deleteEmprestimo(id),
+      });
+      return true;
+    case "/emprestimos/novo":
+      document.body.insertAdjacentHTML(
+        "afterbegin",
+        `<main><app-header></app-header><div id="app-content" class="app-content"></div></main>`
+      );
+      {
+        const livroParam = new URLSearchParams(window.location.search).get("livro");
+        const livroId = Number(livroParam || 0);
+        const options = Number.isFinite(livroId) && livroId > 0 ? { livroId } : {};
+        gestorController.showEmprestimoForm(null, () => navigate("/emprestimos"), options);
+      }
       return true;
     default:
       return false;

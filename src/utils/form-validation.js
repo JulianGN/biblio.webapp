@@ -201,7 +201,29 @@ const emprestimoRules = {
   livro: { label: "Livro", required: true },
   unidade: { label: "Unidade", required: true },
   usuario: { label: "Usuário", required: true },
-  data_emprestimo: { label: "Data de empréstimo", required: true },
+  data_emprestimo: { 
+    label: "Data de empréstimo", 
+    required: true,
+    customValidate: (value) => {
+      if (!value) return "";
+      // Validar formato YYYY-MM-DD
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+        return "Data de empréstimo em formato inválido.";
+      }
+      const date = new Date(value + "T00:00:00Z");
+      if (isNaN(date.getTime())) {
+        return "Data de empréstimo inválida.";
+      }
+      // Não permitir data no futuro (margem de 1 dia por diferença de timezone)
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      if (date > tomorrow) {
+        return "Data de empréstimo não pode estar no futuro.";
+      }
+      return "";
+    },
+  },
   status: {
     label: "Status",
     required: true,
@@ -215,8 +237,22 @@ const emprestimoRules = {
   data_prevista_devolucao: {
     label: "Data prevista de devolução",
     customValidate: (value, payload) => {
-      if (!value || !payload.data_emprestimo) return "";
-      if (value < payload.data_emprestimo) {
+      if (!value) {
+        // Calcular automaticamente se vazio
+        if (!payload.data_emprestimo) return "";
+        return "";
+      }
+      // Validar formato YYYY-MM-DD
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+        return "Data prevista de devolução em formato inválido.";
+      }
+      const datePrevista = new Date(value + "T00:00:00Z");
+      if (isNaN(datePrevista.getTime())) {
+        return "Data prevista de devolução inválida.";
+      }
+      if (!payload.data_emprestimo) return "";
+      const dateEmprestimo = new Date(payload.data_emprestimo + "T00:00:00Z");
+      if (datePrevista < dateEmprestimo) {
         return "Data prevista não pode ser anterior à data de empréstimo.";
       }
       return "";
@@ -228,8 +264,20 @@ const emprestimoRules = {
       if (payload.status === "devolvido" && !value) {
         return "Data de devolução é obrigatória quando o status for devolvido.";
       }
-      if (value && payload.data_emprestimo && value < payload.data_emprestimo) {
-        return "Data de devolução não pode ser anterior à data de empréstimo.";
+      if (!value) return "";
+      // Validar formato YYYY-MM-DD
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+        return "Data de devolução em formato inválido.";
+      }
+      const dateDevolucao = new Date(value + "T00:00:00Z");
+      if (isNaN(dateDevolucao.getTime())) {
+        return "Data de devolução inválida.";
+      }
+      if (payload.data_emprestimo) {
+        const dateEmprestimo = new Date(payload.data_emprestimo + "T00:00:00Z");
+        if (dateDevolucao < dateEmprestimo) {
+          return "Data de devolução não pode ser anterior à data de empréstimo.";
+        }
       }
       return "";
     },
@@ -239,6 +287,25 @@ const emprestimoRules = {
 
 export function validateEmprestimoFormData(payload) {
   const cleanData = sanitizePayload(payload);
+  
+  // Remover strings vazias de campos de data opcionais (converter para null/undefined)
+  if (cleanData.data_prevista_devolucao === "") {
+    cleanData.data_prevista_devolucao = null;
+  }
+  if (cleanData.data_devolucao === "") {
+    cleanData.data_devolucao = null;
+  }
+  
+  // Se não houver data_prevista_devolucao, calcular 14 dias após empréstimo
+  if (!cleanData.data_prevista_devolucao && cleanData.data_emprestimo) {
+    const dateEmprestimo = new Date(cleanData.data_emprestimo + "T00:00:00Z");
+    if (!isNaN(dateEmprestimo.getTime())) {
+      const dueDateObj = new Date(dateEmprestimo);
+      dueDateObj.setDate(dueDateObj.getDate() + 14);
+      cleanData.data_prevista_devolucao = dueDateObj.toISOString().slice(0, 10);
+    }
+  }
+  
   const validation = validatePayload(cleanData, emprestimoRules);
   return { cleanData, ...validation };
 }

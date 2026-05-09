@@ -1,6 +1,7 @@
 import "./emprestimo-form.css";
 import "./livro-autocomplete.js";
 import { validateEmprestimoFormData } from "../../utils/form-validation.js";
+import { showToast } from "../../utils/feedback.js";
 
 class EmprestimoForm extends HTMLElement {
   connectedCallback() {
@@ -49,8 +50,6 @@ class EmprestimoForm extends HTMLElement {
             <label for="observacoes">Observações:</label>
             <textarea id="observacoes" name="observacoes" rows="4" maxlength="1000"></textarea>
           </div>
-
-          <small id="emprestimo-form-feedback" class="app-inline-feedback" aria-live="polite"></small>
 
           <div class="emprestimo-form-footer">
             <button type="button" id="cancelar-emprestimo-btn" class="outline">Cancelar</button>
@@ -114,10 +113,16 @@ class EmprestimoForm extends HTMLElement {
 
     livroAutocomplete.livros = livros;
 
+    // Backup do usuário selecionado antes de regenerar as opções
+    const selectedUsuarioAtual = usuarioSelect.value;
     usuarioSelect.innerHTML = `
       <option value="">Selecione um usuário</option>
       ${usuarios.map((usuario) => `<option value="${usuario.id}">${usuario.nome}</option>`).join("")}
     `;
+    // Restaurar seleção anterior se ainda existir
+    if (selectedUsuarioAtual) {
+      usuarioSelect.value = selectedUsuarioAtual;
+    }
 
     const selectedLivroId = Number(livroAutocomplete.value || 0);
     const livroSelecionado = livros.find((l) => Number(l.id) === selectedLivroId);
@@ -151,6 +156,12 @@ class EmprestimoForm extends HTMLElement {
       if (!form.data_emprestimo.value) {
         const today = new Date().toISOString().slice(0, 10);
         form.data_emprestimo.value = today;
+        // Calcular data prevista de devolução (14 dias após data de empréstimo)
+        if (!form.data_prevista_devolucao.value) {
+          const dueDate = new Date(today);
+          dueDate.setDate(dueDate.getDate() + 14);
+          form.data_prevista_devolucao.value = dueDate.toISOString().slice(0, 10);
+        }
       }
       if (!form.status.value) form.status.value = "aberto";
       this._applyLivroPrefillIfNeeded(form);
@@ -195,9 +206,24 @@ class EmprestimoForm extends HTMLElement {
     const livroAutocomplete = this.querySelector("livro-autocomplete");
     const voltarBtn = this.querySelector("#voltar-emprestimo-btn");
     const cancelarBtn = this.querySelector("#cancelar-emprestimo-btn");
+    const dataEmprestimoInput = form ? form.querySelector("#data_emprestimo") : null;
+    const dataPrevistaInput = form ? form.querySelector("#data_prevista_devolucao") : null;
 
     if (livroAutocomplete) {
       livroAutocomplete.addEventListener("change", () => this._syncOptions());
+    }
+
+    // Atualizar data prevista quando data de empréstimo mudar
+    if (dataEmprestimoInput) {
+      dataEmprestimoInput.addEventListener("change", (e) => {
+        const selectedDate = e.target.value;
+        if (selectedDate && !dataPrevistaInput.value) {
+          // Calcular 14 dias após a data selecionada
+          const dueDate = new Date(selectedDate + "T00:00:00Z");
+          dueDate.setDate(dueDate.getDate() + 14);
+          dataPrevistaInput.value = dueDate.toISOString().slice(0, 10);
+        }
+      });
     }
 
     const goBack = () => {
@@ -228,11 +254,12 @@ class EmprestimoForm extends HTMLElement {
       event.preventDefault();
       const submitButton = form.querySelector('button[type="submit"]');
       const originalText = submitButton ? submitButton.textContent : "Salvar Empréstimo";
-      const feedbackEl = form.querySelector("#emprestimo-form-feedback");
-      const livroInput = form.querySelector('input[name="livro"]');
 
-      const payload = {
-        livro: livroInput ? livroInput.value : "",
+      // Extrair livro do autocomplete, não de um input que não existe
+      const livroId = livroAutocomplete ? livroAutocomplete.value : "";
+
+      let payload = {
+        livro: livroId,
         unidade: form.unidade.value,
         usuario: form.usuario.value,
         data_emprestimo: form.data_emprestimo.value,
@@ -244,11 +271,7 @@ class EmprestimoForm extends HTMLElement {
 
       const validation = validateEmprestimoFormData(payload);
       if (!validation.isValid) {
-        if (feedbackEl) {
-          feedbackEl.textContent = validation.firstError;
-          feedbackEl.classList.remove("is-loading", "is-success");
-          feedbackEl.classList.add("is-error");
-        }
+        showToast(validation.firstError, "error", 5000);
         return;
       }
 
@@ -257,20 +280,15 @@ class EmprestimoForm extends HTMLElement {
         submitButton.textContent = "Salvando...";
       }
 
-      if (feedbackEl) {
-        feedbackEl.textContent = "Salvando dados do empréstimo...";
-        feedbackEl.classList.remove("is-error", "is-success");
-        feedbackEl.classList.add("is-loading");
-      }
+      showToast("Salvando dados do empréstimo...", "info", 10000);
 
       Promise.resolve(this._onSubmit ? this._onSubmit(validation.cleanData) : null)
         .catch((err) => {
-          if (feedbackEl) {
-            feedbackEl.textContent =
-              (err && err.message) || "Não foi possível salvar o empréstimo.";
-            feedbackEl.classList.remove("is-loading", "is-success");
-            feedbackEl.classList.add("is-error");
-          }
+          showToast(
+            (err && err.message) || "Não foi possível salvar o empréstimo.",
+            "error",
+            5000
+          );
         })
         .finally(() => {
           if (submitButton) {

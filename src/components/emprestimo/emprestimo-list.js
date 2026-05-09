@@ -1,6 +1,16 @@
 import "./emprestimo-list.css";
 
 class EmprestimoList extends HTMLElement {
+  _formatDate(dateString) {
+    if (!dateString) return "-";
+    try {
+      const [year, month, day] = dateString.split("-");
+      return `${day}/${month}/${year.slice(-2)}`;
+    } catch {
+      return "-";
+    }
+  }
+
   set emprestimos(value) {
     this._emprestimos = Array.isArray(value) ? value : [];
     this.render();
@@ -82,7 +92,7 @@ class EmprestimoList extends HTMLElement {
                 <th>Unidade</th>
                 <th>Usuário</th>
                 <th>Empréstimo</th>
-                <th>Prev. Devolução</th>
+                <th>Devolução</th>
                 <th>Status</th>
                 <th class="text-end">Ações</th>
               </tr>
@@ -97,9 +107,13 @@ class EmprestimoList extends HTMLElement {
                   <td>${item.livro_titulo || "-"}</td>
                   <td>${item.unidade_nome || "-"}</td>
                   <td>${item.usuario_nome || "-"}</td>
-                  <td>${item.data_emprestimo || "-"}</td>
-                  <td>${item.data_prevista_devolucao || "-"}</td>
-                  <td>${item.status === "devolvido" ? "Devolvido" : "Aberto"}</td>
+                  <td>${this._formatDate(item.data_emprestimo)}</td>
+                  <td>${this._formatDate(item.data_devolucao || item.data_prevista_devolucao)}</td>
+                  <td>
+                    <span class="status-badge ${item.status === "devolvido" ? "status-badge--devolvido" : "status-badge--aberto"}">
+                      ${item.status === "devolvido" ? "Devolvido" : "Aberto"}
+                    </span>
+                  </td>
                   <td>
                     <div class="list-actions">
                       <button class="edit-emprestimo-icon outline border-0" data-id="${item.id}" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>

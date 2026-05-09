@@ -1,6 +1,7 @@
 import "./usuario-form.css";
 import { validateUsuarioFormData } from "../../utils/form-validation.js";
 import { attachDocumentoMask, attachPhoneMask } from "../../utils/input-mask.js";
+import { showToast } from "../../utils/feedback.js";
 
 class UsuarioForm extends HTMLElement {
   connectedCallback() {
@@ -45,8 +46,6 @@ class UsuarioForm extends HTMLElement {
             <label for="observacoes">Observações:</label>
             <textarea id="observacoes" name="observacoes" rows="4" maxlength="1000"></textarea>
           </div>
-
-          <small id="usuario-form-feedback" class="app-inline-feedback" aria-live="polite"></small>
 
           <div class="usuario-form-footer">
             <button type="button" id="cancelar-usuario-btn" class="outline">Cancelar</button>
@@ -135,7 +134,6 @@ class UsuarioForm extends HTMLElement {
       event.preventDefault();
       const submitButton = form.querySelector('button[type="submit"]');
       const originalText = submitButton ? submitButton.textContent : "Salvar Usuário";
-      const feedbackEl = form.querySelector("#usuario-form-feedback");
 
       const payload = {
         nome: form.nome.value,
@@ -149,11 +147,7 @@ class UsuarioForm extends HTMLElement {
 
       const validation = validateUsuarioFormData(payload);
       if (!validation.isValid) {
-        if (feedbackEl) {
-          feedbackEl.textContent = validation.firstError;
-          feedbackEl.classList.remove("is-loading", "is-success");
-          feedbackEl.classList.add("is-error");
-        }
+        showToast(validation.firstError, "error", 5000);
         return;
       }
 
@@ -162,23 +156,18 @@ class UsuarioForm extends HTMLElement {
         submitButton.textContent = "Salvando...";
       }
 
-      if (feedbackEl) {
-        feedbackEl.textContent = "Salvando dados do usuário...";
-        feedbackEl.classList.remove("is-error", "is-success");
-        feedbackEl.classList.add("is-loading");
-      }
+      showToast("Salvando dados do usuário...", "info", 10000);
 
       const cleanPayload = { ...validation.cleanData };
       delete cleanPayload.documento_tipo;
 
       Promise.resolve(this._onSubmit ? this._onSubmit(cleanPayload) : null)
         .catch((err) => {
-          if (feedbackEl) {
-            feedbackEl.textContent =
-              (err && err.message) || "Não foi possível salvar o usuário.";
-            feedbackEl.classList.remove("is-loading", "is-success");
-            feedbackEl.classList.add("is-error");
-          }
+          showToast(
+            (err && err.message) || "Não foi possível salvar o usuário.",
+            "error",
+            5000
+          );
         })
         .finally(() => {
           if (submitButton) {

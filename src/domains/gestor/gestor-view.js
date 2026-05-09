@@ -6,6 +6,7 @@ import {
   validateLivroFormData,
   validateUnidadeFormData,
 } from "../../utils/form-validation.js";
+import { showToast } from "../../utils/feedback.js";
 
 export class GestorView {
   showLoading(message = "Carregando...") {
@@ -184,17 +185,13 @@ export class GestorView {
       event.preventDefault();
       const submitButton = livroFormEl.querySelector('button[type="submit"]');
       const originalText = submitButton ? submitButton.textContent : "Salvar Livro";
-      const feedbackEl = livroFormEl.querySelector("#livro-form-feedback");
       
       if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = "Salvando...";
       }
-      if (feedbackEl) {
-        feedbackEl.textContent = "Salvando dados do livro...";
-        feedbackEl.classList.remove("is-error", "is-success");
-        feedbackEl.classList.add("is-loading");
-      }
+      
+      showToast("Salvando dados do livro...", "info", 10000);
 
       // CORREÇÃO: Extração forçada dos valores diretamente do DOM
       const formData = {
@@ -213,11 +210,7 @@ export class GestorView {
 
       const validation = validateLivroFormData(formData);
       if (!validation.isValid) {
-        if (feedbackEl) {
-          feedbackEl.textContent = validation.firstError;
-          feedbackEl.classList.remove("is-loading", "is-success");
-          feedbackEl.classList.add("is-error");
-        }
+        showToast(validation.firstError, "error", 5000);
         if (submitButton) {
           submitButton.disabled = false;
           submitButton.textContent = originalText || "Salvar Livro";
@@ -228,12 +221,11 @@ export class GestorView {
       // Passando o objeto formData extraído em vez do elemento DOM
       Promise.resolve(onSubmit(validation.cleanData))
         .catch((err) => {
-          if (feedbackEl) {
-            feedbackEl.textContent =
-              (err && err.message) || "Não foi possível salvar o livro.";
-            feedbackEl.classList.remove("is-loading", "is-success");
-            feedbackEl.classList.add("is-error");
-          }
+          showToast(
+            (err && err.message) || "Não foi possível salvar o livro.",
+            "error",
+            5000
+          );
         })
         .finally(() => {
           if (submitButton) {
@@ -272,17 +264,13 @@ export class GestorView {
         event.preventDefault();
         const submitButton = form.querySelector('button[type="submit"]');
         const originalText = submitButton ? submitButton.textContent : "Salvar Unidade";
-        const feedbackEl = form.querySelector("#unidade-form-feedback");
         
         if (submitButton) {
           submitButton.disabled = true;
           submitButton.textContent = "Salvando...";
         }
-        if (feedbackEl) {
-          feedbackEl.textContent = "Salvando dados da unidade...";
-          feedbackEl.classList.remove("is-error", "is-success");
-          feedbackEl.classList.add("is-loading");
-        }
+        
+        showToast("Salvando dados da unidade...", "info", 10000);
 
         // CORREÇÃO: Extração forçada dos valores diretamente do DOM para unidades também
         const formData = {
@@ -295,11 +283,7 @@ export class GestorView {
 
         const validation = validateUnidadeFormData(formData);
         if (!validation.isValid) {
-          if (feedbackEl) {
-            feedbackEl.textContent = validation.firstError;
-            feedbackEl.classList.remove("is-loading", "is-success");
-            feedbackEl.classList.add("is-error");
-          }
+          showToast(validation.firstError, "error", 5000);
           if (submitButton) {
             submitButton.disabled = false;
             submitButton.textContent = originalText || "Salvar Unidade";
@@ -309,12 +293,11 @@ export class GestorView {
 
         Promise.resolve(typeof onSubmit === "function" ? onSubmit(validation.cleanData) : null)
           .catch((err) => {
-            if (feedbackEl) {
-              feedbackEl.textContent =
-                (err && err.message) || "Não foi possível salvar a unidade.";
-              feedbackEl.classList.remove("is-loading", "is-success");
-              feedbackEl.classList.add("is-error");
-            }
+            showToast(
+              (err && err.message) || "Não foi possível salvar a unidade.",
+              "error",
+              5000
+            );
           })
           .finally(() => {
             if (submitButton) {

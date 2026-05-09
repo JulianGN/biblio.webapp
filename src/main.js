@@ -48,3 +48,30 @@ window.addEventListener("popstate", () =>
 );
 
 appRouter({ gestorController, gestorView, authController, authView, navigate });
+
+// Table scroll indicators: add classes when table overflows and on scroll
+function updateTableScrollIndicators() {
+  document.querySelectorAll('.table-responsive').forEach((container) => {
+    const hasOverflow = container.scrollWidth > container.clientWidth + 1;
+    if (hasOverflow) container.classList.add('is-scrollable');
+    else container.classList.remove('is-scrollable');
+
+    // mark scrolled state for left shadow
+    if (container.scrollLeft > 6) container.classList.add('scrolled');
+    else container.classList.remove('scrolled');
+
+    // listen to scroll once
+    if (!container.__scrollHandlerAttached) {
+      container.addEventListener('scroll', () => {
+        if (container.scrollLeft > 6) container.classList.add('scrolled');
+        else container.classList.remove('scrolled');
+      });
+      container.__scrollHandlerAttached = true;
+    }
+  });
+}
+
+window.addEventListener('resize', () => updateTableScrollIndicators());
+window.addEventListener('DOMContentLoaded', () => updateTableScrollIndicators());
+// run once after initial load
+setTimeout(updateTableScrollIndicators, 120);

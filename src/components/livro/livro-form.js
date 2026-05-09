@@ -111,7 +111,6 @@ class LivroForm extends HTMLElement {
                      <button type="button" id="add-unidade-livro" class="outline">Adicionar Unidade</button>
                 </div>
                 <div id="livro-unidades-list" style="margin:8px 0 16px 0;"></div>
-                <small id="livro-form-feedback" class="app-inline-feedback" aria-live="polite"></small>
                 <div class="livro-form-footer">
                     <button type="button" id="cancelar-btn" class="outline">Cancelar</button>
                     <button type="submit">Salvar Livro</button>
